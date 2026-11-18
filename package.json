@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "frames": "node scripts/extract-frames.mjs",
     "frames:dummy": "node scripts/make-dummy-frames.mjs"
   },
   "dependencies": {
