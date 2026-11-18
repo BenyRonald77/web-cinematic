@@ -62,7 +62,7 @@ Kamera, latar, dan pencahayaan konsisten di semua scene: latar krem polos hangat
 | 01 | **Wake the beans** / *one by one.* + subcopy + tombol "Order now" & "See the menu" | Dripper keramik terakota di atas server kaca kosong, satu biji kopi melayang di atas → biji-biji kopi berjatuhan pelan dan menumpuk di dalam dripper | Kiri, subjek di kanan |
 | 02 | **Pour it slow.** | Dripper berisi bubuk kopi → teko leher angsa masuk dari kanan atas dan menuang air panas, uap tipis naik | Kiri |
 | 03 | **Let it bloom.** | Bubuk kopi mengembang (bloom) → tetesan kopi jatuh dan server kaca terisi kopi kecokelatan | Kiri bawah |
-| 04 | **Make time taste better.** | Kopi dituang ke cangkir keramik berisi susu → pusaran latte art, kamera sedikit mendekat dan agak dari atas | Kanan, subjek di kiri |
+| 04 | **Make time taste better.** | Dripper dan server kaca perlahan memudar, digantikan cangkir keramik berisi latte dengan pusaran latte art di posisi yang sama (kanan); kamera mendekat pelan dan sedikit menunduk | Kiri, subjek di kanan |
 
 Setiap scene:
 - Di-*pin* selama sekitar 250–300vh scroll.
