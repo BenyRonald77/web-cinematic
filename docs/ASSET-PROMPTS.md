@@ -11,7 +11,7 @@ K0 ──scene01──▶ K1 ──scene02──▶ K2 ──scene03──▶ K3
 ```
 
    Scene 01 = video dari K0 ke K1, scene 02 = K1 ke K2, dan seterusnya. Jadi cukup **5 gambar** untuk 4 video.
-4. Simpan di `assets/keyframes/` dengan nama `k0.png` … `k4.png`.
+4. Simpan di `assets/keyframes/` dengan nama `k0` … `k4` (`.png` atau `.jpg`, file asli dari Gemini). Versi siap pakai, setelah warna latarnya disamakan, ada di `assets/keyframes/final/`: **pakai yang di `final/` untuk Kling.**
 5. Di Kling: Image to Video → isi Start frame dan End frame → durasi 5s → rasio 16:9. Simpan hasil ke `assets/raw/scene-01.mp4` … `scene-04.mp4`.
 
 Tips: generate 2–4 versi tiap keyframe dan pilih yang paling cocok dengan gambar sebelumnya. Kalau warna latar mulai bergeser, tambahkan kalimat "keep the exact same background color, lighting and camera position as the reference image".
@@ -47,7 +47,7 @@ Edit this image: the kettle is gone. The coffee grounds in the dripper have bloo
 
 **K4 — akhir scene 04** (edit dari K3)
 ```
-Edit this image: the camera moves closer and slightly higher. The scene now shows a wide matte ceramic cup on a saucer in the LEFT half of the frame, filled with a latte with a beautiful swirling rosetta latte art pattern, seen at a 45-degree top-down angle. The right half of the frame is clean empty space for text. Same warm cream backdrop and soft light from the left.
+Edit this image: the camera moves slightly closer and a little higher. The dripper and glass server are gone; in their exact place, in the RIGHT half of the frame, stands a wide matte ceramic cup on a saucer, filled with a latte with a beautiful swirling rosetta latte art pattern, seen from a gentle top-down angle. The left half of the frame stays clean empty space for text. Keep the exact same warm cream backdrop color and soft light from the left.
 ```
 
 ## Prompt Kling (per scene)
@@ -71,7 +71,7 @@ The kettle lifts away and exits frame, the coffee grounds swell and bloom with s
 
 **Scene 04 (K3 → K4)**
 ```
-Slow smooth camera push-in and tilt down as the scene transitions to a ceramic cup where coffee is poured into milk forming swirling latte art, slow motion, elegant, no cuts.
+Slow smooth camera push-in and gentle tilt down. The pour-over dripper and glass server softly dissolve away as a ceramic cup with swirling latte art appears in the same place. Elegant, slow motion, no cuts.
 ```
 
 **Negative prompt (semua scene)**

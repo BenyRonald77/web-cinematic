@@ -61,8 +61,8 @@ export const scenes: Scene[] = [
     number: "04",
     title: "Make time taste better.",
     body: "Sit down. Stay a while.",
-    textPosition: "right",
-    focusX: 0.35,
+    textPosition: "left", // the cup now sits on the right, where the dripper was
+    focusX: 0.68,
     ctas: [{ label: "Visit us", href: "#visit" }],
   },
 ];
