@@ -20,19 +20,55 @@
   color-scheme: light;
 }
 
-/*
- * Intro text (first scene) stays hidden until GSAP has split it and set its start state,
- * so it never flashes before hydration. Reduced motion and no-JS (see layout.tsx) show it.
- */
-@media (prefers-reduced-motion: no-preference) {
-  [data-intro] {
-    visibility: hidden;
-  }
-}
-
-/* SplitText masks clip overflow; give descenders and italic overhang room without moving layout. */
+/* Word/line masks clip overflow; give descenders and italic overhang room without moving layout. */
+.intro-mask,
 .split-word-mask,
 .split-line-mask {
   padding: 0 0.08em 0.14em;
   margin: 0 -0.08em -0.14em;
+}
+
+/*
+ * First-scene intro (see IntroWords): CSS only, so the text plays in from the first paint
+ * without waiting for JS. GSAP never touches these inner elements; it animates their parents.
+ */
+.intro-mask {
+  display: inline-block;
+  vertical-align: top;
+  overflow: clip;
+}
+
+.intro-rise {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Longhands on purpose: the CSS build turns a name-less `animation:` shorthand into duration auto. */
+  .intro-rise,
+  .intro-fade {
+    animation-duration: 0.9s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+    animation-fill-mode: both;
+    animation-delay: calc(0.15s + var(--i, 0) * 0.06s + var(--j, 0) * 0.02s);
+  }
+  .intro-rise {
+    animation-name: intro-rise;
+  }
+  .intro-fade {
+    animation-name: intro-fade;
+  }
+}
+
+/* 125 %: clears the mask's bottom padding (room for descenders) so no glyph tops peek out. */
+@keyframes intro-rise {
+  from {
+    transform: translateY(125%);
+  }
+}
+
+@keyframes intro-fade {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+  }
 }

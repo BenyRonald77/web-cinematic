@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
 import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
 
 /** "SCROLL" cue for the first scene. Fades out once the page scrolls, back in at the very top. */
@@ -35,11 +35,17 @@ export default function ScrollHint() {
     <div
       ref={ref}
       aria-hidden="true"
-      className="pointer-events-none absolute bottom-6 left-1/2 flex -translate-x-1/2 flex-col items-center gap-2 text-[0.65rem] font-semibold tracking-[0.3em]"
+      className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 text-[0.65rem] font-semibold tracking-[0.3em]"
     >
-      <span>SCROLL</span>
-      <span className="relative h-10 w-px overflow-hidden bg-espresso/20">
-        <span data-hint-line className="absolute inset-0 bg-espresso" />
+      {/* CSS fade-in after the title (see globals.css); GSAP only fades the outer element on scroll. */}
+      <span
+        className="intro-fade flex flex-col items-center gap-2"
+        style={{ "--i": 12 } as CSSProperties}
+      >
+        <span>SCROLL</span>
+        <span className="relative h-10 w-px overflow-hidden bg-espresso/20">
+          <span data-hint-line className="absolute inset-0 bg-espresso" />
+        </span>
       </span>
     </div>
   );

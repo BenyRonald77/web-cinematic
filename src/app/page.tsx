@@ -18,7 +18,7 @@ export default function Home() {
           joinPrevious={index > 0}
           titleId={`${scene.id}-title`}
         >
-          <SceneOverlay scene={scene} headingLevel={index === 0 ? 1 : 2} />
+          <SceneOverlay scene={scene} headingLevel={index === 0 ? 1 : 2} intro={index === 0} />
           {index === 0 && <ScrollHint />}
         </ScrollSequence>
       ))}

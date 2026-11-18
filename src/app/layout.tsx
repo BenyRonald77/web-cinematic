@@ -26,9 +26,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fraunces.variable} ${manrope.variable} antialiased`}>
       <body className="bg-cream font-sans text-espresso">
-        <noscript>
-          <style>{"[data-intro]{visibility:visible!important}"}</style>
-        </noscript>
         <SmoothScroll>{children}</SmoothScroll>
       </body>
     </html>

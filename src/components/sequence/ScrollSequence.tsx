@@ -23,7 +23,10 @@ type ScrollSequenceProps = {
   focusX: number;
   /** Load this scene first and fetch its poster at high priority (first scene). */
   priority?: boolean;
-  /** Text is on screen at load and plays an intro instead of entering on scroll (first scene). */
+  /**
+   * Text is already on screen at load (its intro is CSS, see IntroWords), so GSAP only scrolls
+   * it out instead of also scrolling it in (first scene).
+   */
   intro?: boolean;
   /**
    * Overlap the previous scene's last screen so the cut happens in place: this scene stays
@@ -45,7 +48,7 @@ function buildTextTimeline(pieces: Element[], intro: boolean) {
   if (!intro) {
     tl.fromTo(
       pieces,
-      { yPercent: 110, opacity: 0 },
+      { yPercent: 125, opacity: 0 }, // 125: clears the mask's bottom padding
       { yPercent: 0, opacity: 1, duration: 0.16, ease: "power2.out", stagger: { amount: 0.08 } },
       0.06,
     );
@@ -103,7 +106,6 @@ export default function ScrollSequence({
         let sizeDirty = true;
         let rafId = 0;
         let textTl: gsap.core.Timeline | null = null;
-        let introTl: gsap.core.Timeline | null = null;
         let cancelled = false;
 
         // --- Drawing: only when the nearest loaded frame changes ---------------------------
@@ -162,7 +164,6 @@ export default function ScrollSequence({
             target = next;
             requestRender();
           }
-          if (introTl?.isActive() && progress > 0.02) introTl.progress(1);
           textTl?.progress(progress);
         };
 
@@ -189,7 +190,9 @@ export default function ScrollSequence({
           if (drawn < 0 || Math.abs(index - target) < Math.abs(drawn - target)) requestRender();
         });
 
-        // --- Text (after fonts, so lines are measured with the real font) ------------------
+        // --- Text --------------------------------------------------------------------------
+        // [data-reveal] elements animate as they are; [data-split] ones are split by SplitText
+        // first (after fonts load, so lines are measured with the real font).
         const setupText = () => {
           const sources = gsap.utils.toArray<HTMLElement>("[data-split], [data-reveal]", overlay);
           const splits = new Map<HTMLElement, SplitText>();
@@ -205,7 +208,6 @@ export default function ScrollSequence({
           const rebuild = () => {
             if (!ready) return;
             context.add(() => {
-              introTl?.progress(1);
               textTl?.revert();
               textTl = buildTextTimeline(pieces(), intro);
               textTl.progress(trigger.progress);
@@ -231,22 +233,15 @@ export default function ScrollSequence({
           }
           ready = true;
           rebuild();
-
-          if (intro) {
-            if (trigger.progress < 0.02) {
-              introTl = gsap.timeline({ delay: 0.15 }).fromTo(
-                pieces(),
-                { yPercent: 110, opacity: 0 },
-                { yPercent: 0, opacity: 1, duration: 1.1, ease: "power3.out", stagger: 0.06 },
-              );
-            }
-            gsap.set(overlay, { visibility: "visible" }); // CSS hides [data-intro] until now
-          }
         };
 
-        document.fonts.ready.then(() => {
-          if (!cancelled) context.add(setupText);
-        });
+        if (overlay.querySelector("[data-split]")) {
+          document.fonts.ready.then(() => {
+            if (!cancelled) context.add(setupText);
+          });
+        } else {
+          setupText(); // nothing to measure (e.g. server-split intro words): set up right away
+        }
 
         return () => {
           cancelled = true;
@@ -309,11 +304,7 @@ export default function ScrollSequence({
         />
 
         {/* Text lives inside the small viewport (svh) so the mobile toolbar never covers it. */}
-        <div
-          ref={overlayRef}
-          data-intro={intro ? "" : undefined}
-          className="absolute inset-x-0 top-0 h-svh"
-        >
+        <div ref={overlayRef} className="absolute inset-x-0 top-0 h-svh">
           {children}
         </div>
       </div>
