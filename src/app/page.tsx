@@ -1,43 +1,35 @@
+import ScrollHint from "@/components/sections/ScrollHint";
+import SceneOverlay from "@/components/sections/SceneOverlay";
+import ScrollSequence from "@/components/sequence/ScrollSequence";
 import { scenes } from "@/data/scenes";
 import sequences from "@/data/sequences.json";
 
-// Milestone 1 placeholder: one tall section per scene, no canvas or animation yet.
 export default function Home() {
   return (
     <main>
-      {scenes.map((scene, index) => {
-        const Heading = index === 0 ? "h1" : "h2";
-        const frames = sequences[scene.id];
+      {scenes.map((scene, index) => (
+        <ScrollSequence
+          key={scene.id}
+          sceneId={scene.id}
+          frames={sequences[scene.id]}
+          focusX={scene.focusX}
+          priority={index === 0}
+          intro={index === 0}
+          joinPrevious={index > 0}
+          titleId={`${scene.id}-title`}
+        >
+          <SceneOverlay scene={scene} headingLevel={index === 0 ? 1 : 2} />
+          {index === 0 && <ScrollHint />}
+        </ScrollSequence>
+      ))}
 
-        return (
-          <section
-            key={scene.id}
-            id={scene.id}
-            aria-labelledby={`${scene.id}-title`}
-            className={`relative h-[300vh] ${index % 2 === 0 ? "bg-cream" : "bg-cream-deep"}`}
-          >
-            <div className="sticky top-0 flex h-svh flex-col justify-center px-6 md:px-16">
-              <p className="text-sm font-semibold tracking-[0.2em] text-espresso-soft">
-                {scene.number} —
-              </p>
-              <Heading
-                id={`${scene.id}-title`}
-                className="mt-3 max-w-[12ch] font-display text-[clamp(3rem,9vw,8.75rem)] leading-[0.92] font-semibold tracking-tight"
-              >
-                {scene.title}
-                {scene.titleAccent && (
-                  <span className="block font-normal italic">{scene.titleAccent}</span>
-                )}
-              </Heading>
-              <p className="mt-6 max-w-md text-base text-espresso-soft md:text-lg">{scene.body}</p>
-              <p className="mt-10 text-xs tracking-wide text-espresso-soft/70">
-                {scene.id} · placeholder · {frames.desktop.count} desktop / {frames.mobile.count}{" "}
-                mobile frames
-              </p>
-            </div>
-          </section>
-        );
-      })}
+      {/* Placeholder so the last scene can scroll away; replaced by the real sections in milestone 5. */}
+      <section
+        id="menu"
+        className="flex min-h-svh items-center justify-center bg-cream-deep px-6 text-center"
+      >
+        <p className="font-display text-3xl md:text-5xl">Menu, story & visit — milestone 5</p>
+      </section>
     </main>
   );
 }

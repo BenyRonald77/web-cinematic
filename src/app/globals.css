@@ -19,3 +19,20 @@
 :root {
   color-scheme: light;
 }
+
+/*
+ * Intro text (first scene) stays hidden until GSAP has split it and set its start state,
+ * so it never flashes before hydration. Reduced motion and no-JS (see layout.tsx) show it.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  [data-intro] {
+    visibility: hidden;
+  }
+}
+
+/* SplitText masks clip overflow; give descenders and italic overhang room without moving layout. */
+.split-word-mask,
+.split-line-mask {
+  padding: 0 0.08em 0.14em;
+  margin: 0 -0.08em -0.14em;
+}
