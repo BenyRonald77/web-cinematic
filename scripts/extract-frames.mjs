@@ -11,13 +11,15 @@
  *   scene N+1 starts with.
  * - The manifest is merged: scenes without a video keep their current entry (e.g. dummy frames).
  * - Existing frames of a scene are only replaced once its new frames are extracted.
+ * - scripts/frames.config.json can trim a clip: { "trim": { "scene-02": { "start": 0, "end": 7.708 } } }
+ *   (seconds; end is exclusive). Use it when a generated clip glitches at its ends.
  *
  * Usage: npm run frames                  every assets/raw/scene-XX video
  *        npm run frames -- scene-01      only the given scene(s)
  *        options: --src <dir> --out <dir> --manifest <file>   (defaults above)
  * Env:   FFMPEG_PATH, FFPROBE_PATH
  */
-import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import {
   BUDGET_BYTES,
@@ -41,8 +43,28 @@ import {
 } from "./lib/frames.mjs";
 
 const VIDEO_RE = /^(scene-\d{2})\.(mp4|mov|webm|mkv)$/i;
+const CONFIG_PATH = path.join(ROOT, "scripts", "frames.config.json");
 const rel = (p) => path.relative(ROOT, p) || ".";
 const pad = (n) => `${String(n).padStart(4, "0")}.webp`;
+const sec = (s) => s.toFixed(3);
+
+function readConfig() {
+  if (!existsSync(CONFIG_PATH)) return {};
+  try {
+    return JSON.parse(readFileSync(CONFIG_PATH, "utf8"));
+  } catch (error) {
+    fail(`${rel(CONFIG_PATH)} is not valid JSON: ${error.message}`);
+  }
+}
+
+/** Part of the clip to use, in seconds (end exclusive), from the optional trim config. */
+function clipRange(scene, info, config) {
+  const trim = config.trim?.[scene] ?? {};
+  const start = Math.max(0, Number(trim.start ?? 0));
+  const end = Math.min(info.duration, Number(trim.end ?? info.duration));
+  if (!(end > start)) fail(`${scene}: trim end (${end}) must be after start (${start})`);
+  return { start, end, trimmed: start > 0 || end < info.duration };
+}
 
 function parseArgs(argv) {
   const opts = { src: RAW_DIR, out: OUT_DIR, manifest: MANIFEST_PATH, scenes: [] };
@@ -112,18 +134,21 @@ function evenly(total, keep) {
   return Array.from({ length: keep }, (_, i) => Math.round((i * (total - 1)) / (keep - 1)));
 }
 
-function extractVariant(file, sceneDir, variant, spec) {
+function extractVariant(file, sceneDir, variant, spec, { start, end }) {
   const dir = path.join(sceneDir, variant);
   const tmp = path.join(sceneDir, `.tmp-${variant}`);
   const scale = `scale=${spec.width}:-2:flags=lanczos`;
   const webp = ["-c:v", "libwebp", "-quality", String(QUALITY)];
+  const quiet = ["-hide_banner", "-loglevel", "error", "-y"];
+  // Input seeking (-ss before -i) is frame-accurate when decoding; -t limits the output duration.
+  const tailStart = Math.max(start, end - 0.5);
   rmSync(tmp, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
 
   try {
     run(
       FFMPEG,
-      ["-hide_banner", "-loglevel", "error", "-y", "-i", file, "-an", "-vf", `fps=${spec.fps},${scale}`, ...webp, "-f", "image2", path.join(tmp, "%04d.webp")],
+      [...quiet, "-ss", sec(start), "-i", file, "-t", sec(end - start), "-an", "-vf", `fps=${spec.fps},${scale}`, ...webp, "-f", "image2", path.join(tmp, "%04d.webp")],
       `ffmpeg ${path.basename(file)} → ${variant}`,
     );
     // The clip's true first and last frames: these are the cut points shared with the previous
@@ -132,12 +157,12 @@ function extractVariant(file, sceneDir, variant, spec) {
     const last = path.join(tmp, "last.webp");
     run(
       FFMPEG,
-      ["-hide_banner", "-loglevel", "error", "-y", "-i", file, "-an", "-vf", scale, "-frames:v", "1", ...webp, "-f", "image2", first],
+      [...quiet, "-ss", sec(start), "-i", file, "-an", "-vf", scale, "-frames:v", "1", ...webp, "-f", "image2", first],
       `ffmpeg ${path.basename(file)} → first frame`,
     );
     run(
       FFMPEG,
-      ["-hide_banner", "-loglevel", "error", "-y", "-sseof", "-1", "-i", file, "-an", "-vf", scale, ...webp, "-update", "1", "-f", "image2", last],
+      [...quiet, "-ss", sec(tailStart), "-i", file, "-t", sec(end - tailStart), "-an", "-vf", scale, ...webp, "-update", "1", "-f", "image2", last],
       `ffmpeg ${path.basename(file)} → last frame`,
     );
 
@@ -169,6 +194,7 @@ function main() {
     fail(`No scene videos in ${rel(opts.src)} (expected scene-01.mp4, scene-02.mp4, …).`);
   }
 
+  const config = readConfig();
   const manifest = readManifest(opts.manifest);
   const processed = new Set();
   console.log(`Extracting ${videos.length} scene(s) from ${rel(opts.src)} → ${rel(opts.out)}\n`);
@@ -185,9 +211,17 @@ function main() {
       console.warn(`  ⚠ ${info.width} px wide: desktop frames are upscaled to ${VARIANTS.desktop.width} px (a 1080p source looks sharper)`);
     }
 
+    const range = clipRange(scene, info, config);
+    if (range.trimmed) {
+      const frame = (t) => Math.round(t * info.fps);
+      console.log(
+        `  trimmed to ${range.start.toFixed(2)}–${range.end.toFixed(2)} s (source frames #${frame(range.start)}–#${frame(range.end) - 1}, ${rel(CONFIG_PATH)})`,
+      );
+    }
+
     const entry = {};
     for (const [variant, spec] of Object.entries(VARIANTS)) {
-      const result = extractVariant(file, path.join(opts.out, scene), variant, spec);
+      const result = extractVariant(file, path.join(opts.out, scene), variant, spec, range);
       entry[variant] = { count: result.count, width: result.width, height: result.height };
       const thinned = result.extracted > result.count ? `  (thinned from ${result.extracted})` : "";
       console.log(

@@ -1,0 +1,8 @@
+{
+  "trim": {
+    "scene-02": {
+      "end": 7.708,
+      "note": "Veo snaps toward the end frame in the last frames (kettle turns from silver to black at #182, the server suddenly fills with coffee at #185-187). End on #184 (empty server, black kettle), which matches scene-03's first frame. Remove once scene-02 is regenerated."
+    }
+  }
+}

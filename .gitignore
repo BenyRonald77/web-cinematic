@@ -23,10 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# TEMPORARY: dummy frames from `npm run frames:dummy`.
-# Remove this line once the real scene videos are in (milestone 4) and their frames get committed.
-public/sequences/
-
 # tooling output (Playwright MCP screenshots)
 .playwright-mcp/
 

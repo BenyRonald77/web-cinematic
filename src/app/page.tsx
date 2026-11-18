@@ -15,7 +15,8 @@ export default function Home() {
           focusX={scene.focusX}
           priority={index === 0}
           intro={index === 0}
-          joinPrevious={index > 0}
+          blendTop={index > 0}
+          fadeBottom={index === scenes.length - 1}
           titleId={`${scene.id}-title`}
         >
           <SceneOverlay scene={scene} headingLevel={index === 0 ? 1 : 2} intro={index === 0} />
@@ -26,7 +27,7 @@ export default function Home() {
       {/* Placeholder so the last scene can scroll away; replaced by the real sections in milestone 5. */}
       <section
         id="menu"
-        className="flex min-h-svh items-center justify-center bg-cream-deep px-6 text-center"
+        className="flex min-h-svh items-center justify-center bg-cream px-6 text-center"
       >
         <p className="font-display text-3xl md:text-5xl">Menu, story & visit — milestone 5</p>
       </section>

@@ -2,8 +2,8 @@
 
 /* Brand palette. Accent is a placeholder (dark olive) until PRD §12 is decided. */
 @theme {
-  --color-cream: #efe6d8;
-  --color-cream-deep: #e6d9c4;
+  --color-cream: #fae8d4; /* = the video backdrop (averaged over all frames), so overlays blend in */
+  --color-cream-deep: #f0dcc4;
   --color-espresso: #2a1c13;
   --color-espresso-soft: #5c4838;
   --color-accent: #4a5428;
@@ -18,6 +18,19 @@
 
 :root {
   color-scheme: light;
+}
+
+/*
+ * Phones: the centred subject fills most of the screen height, so scene text always crosses it.
+ * A soft halo in the backdrop colour keeps letters readable there and is invisible on the backdrop.
+ */
+@media (max-width: 767px) {
+  .text-halo {
+    text-shadow:
+      0 0 2px var(--color-cream),
+      0 0 12px var(--color-cream),
+      0 0 24px var(--color-cream);
+  }
 }
 
 /* Word/line masks clip overflow; give descenders and italic overhang room without moving layout. */

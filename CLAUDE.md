@@ -50,14 +50,16 @@ docs/                     PRD.md, ASSET-PROMPTS.md
 
 ## How the cinematic scenes work
 
-- Each scene is a pinned section (~250–300vh) containing a full-viewport `<canvas>` and a text overlay.
-- ScrollTrigger `scrub` maps scroll progress → frame index. Draw only when the index changes (requestAnimationFrame).
+- Each scene is a full-screen section (`h-lvh`, **not pinned**) with a `<canvas>` and a text overlay. The page keeps scrolling while the film plays: frame progress runs from the section entering at the bottom (`clamp(top bottom)`) to leaving at the top (`bottom top`), so two scenes can be on screen at once during a transition.
+- Scenes 02–04 overlap the previous scene by 14lvh and fade their top edge in over it (`blendTop`), so stacked scenes meet in a soft gradient, not a seam; the last scene fades its bottom into the page (`fadeBottom`). The page background (`--color-cream`) equals the video backdrop.
+- Scroll progress → frame index. Draw only when the index changes (requestAnimationFrame).
 - `drawCover(ctx, img, focusX)`: cover-fit the image on the canvas; `focusX` (0–1) picks the horizontal crop point so the subject stays visible on portrait screens.
 - Canvas size = CSS size × `Math.min(devicePixelRatio, 2)`. Re-size and `ScrollTrigger.refresh()` on resize/orientation change.
 - Pick `desktop` or `mobile` frame set once on load based on viewport width (< 768px → mobile).
 - Preload: scene 01 first (first 20 frames with priority), other scenes when within ~1 viewport of entering. Show frame 1 as poster until loaded. Never draw an image that is not `complete`; fall back to the nearest loaded frame.
-- Text: SplitText by lines/words, animate `yPercent` + `opacity` in a timeline tied to the same ScrollTrigger.
-- `prefers-reduced-motion: reduce` → no pinning or scrub; show the last frame of each scene as a static image with plain text.
+- Text scrolls with its section. Scene 01's text is visible at first paint (server-split words, CSS keyframes intro, see `IntroWords`). Scenes 02–04: SplitText by lines/words, `yPercent` + `opacity` reveal while the section enters, driven by the same ScrollTrigger progress; no exit animation.
+- Phones: the centred subject fills the screen height, so text sits at the bottom over a backdrop-coloured scrim (`[data-scrim]`, fades in with the text) plus a soft text halo.
+- `prefers-reduced-motion: reduce` → no scrub; show the last frame of each scene as a static image with plain text.
 - Frame counts and paths come from `src/data/sequences.json`. Never hardcode them.
 
 ## Rules
@@ -80,6 +82,7 @@ For each `assets/raw/scene-0X` video (`.mp4` preferred; `.mov`, `.webm`, `.mkv` 
 - A scene's old frames are only replaced once its new frames are extracted.
 - `src/data/sequences.json` is merged, not rewritten: `{ "scene-01": { "desktop": { "count", "width", "height" }, "mobile": {...} }, ... }`. Width and height are read from the output frames. Scenes without a video keep their entry (e.g. dummy frames); it warns if their frames are missing on disk.
 - Prints size per scene and totals against the PRD §10 budget (desktop ≤ 35 MB, mobile ≤ 12 MB). Warns if desktop > 9 MB per scene, if the source is not 16:9, or if it is narrower than 1600 px (upscaled; prefer 1080p).
+- `scripts/frames.config.json` can trim a clip (`{ "trim": { "scene-02": { "start": 0, "end": 7.708 } } }`, seconds, end exclusive), e.g. when a generated clip glitches at its ends.
 - `npm run frames -- scene-01` processes only the given scene(s). `--src`, `--out`, `--manifest` override the folders (useful for tests outside the repo).
 - ffmpeg and ffprobe come from PATH, or from `FFMPEG_PATH` / `FFPROBE_PATH`.
 

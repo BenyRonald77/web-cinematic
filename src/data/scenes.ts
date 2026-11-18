@@ -34,7 +34,7 @@ export const scenes: Scene[] = [
     titleAccent: "one by one.",
     body: "Single-origin beans from across the archipelago, roasted in small batches every week.",
     textPosition: "left",
-    focusX: 0.68,
+    focusX: 0.84,
     ctas: [
       { label: "Order now", href: "#menu" },
       { label: "See the menu", href: "#menu" },
@@ -46,7 +46,7 @@ export const scenes: Scene[] = [
     title: "Pour it slow.",
     body: "Ninety-two degrees. Thirty seconds of patience.",
     textPosition: "left",
-    focusX: 0.62,
+    focusX: 0.84,
   },
   {
     id: "scene-03",
@@ -54,15 +54,15 @@ export const scenes: Scene[] = [
     title: "Let it bloom.",
     body: "The first breath of the grounds is where the flavour begins.",
     textPosition: "left-bottom",
-    focusX: 0.6,
+    focusX: 0.84,
   },
   {
     id: "scene-04",
     number: "04",
-    title: "Make time taste better.",
+    title: "Make time\ntaste better.", // explicit break keeps the title clear of the cup on desktop
     body: "Sit down. Stay a while.",
     textPosition: "left", // the cup now sits on the right, where the dripper was
-    focusX: 0.68,
+    focusX: 0.84,
     ctas: [{ label: "Visit us", href: "#visit" }],
   },
 ];

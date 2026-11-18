@@ -2,8 +2,8 @@ import type { CSSProperties } from "react";
 import type { Scene, TextPosition } from "@/data/scenes";
 import IntroWords from "./IntroWords";
 
-// Mobile: text sits at the bottom of the safe (svh) area, under the subject.
-// Desktop (md+): placement comes from scenes.ts.
+// Mobile: text sits at the bottom of the safe (svh) area, over a soft backdrop-coloured scrim.
+// Desktop (md+): placement comes from scenes.ts; no scrim needed (text sits on the empty half).
 const placement: Record<TextPosition, string> = {
   left: "md:justify-center md:items-start",
   "left-bottom": "md:justify-end md:items-start",
@@ -11,7 +11,7 @@ const placement: Record<TextPosition, string> = {
 };
 
 const ctaClass = [
-  "rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-contrast transition-opacity hover:opacity-85",
+  "rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-contrast transition-opacity hover:opacity-85 [text-shadow:none]",
   "rounded-full border border-espresso/30 px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-70",
 ];
 
@@ -27,10 +27,13 @@ type SceneOverlayProps = {
 
 const order = (i: number) => ({ "--i": i }) as CSSProperties;
 
-/** Text for one cinematic scene. data-split / data-reveal mark what ScrollSequence animates. */
+/** Text for one cinematic scene. data-split / data-reveal / data-scrim mark what ScrollSequence animates. */
 export default function SceneOverlay({ scene, headingLevel, intro = false }: SceneOverlayProps) {
   const Heading = headingLevel === 1 ? "h1" : "h2";
-  const titleWords = scene.title.split(/\s+/).length;
+  // "\n" in a title is a deliberate line break (e.g. to keep a long title clear of the subject).
+  const titleLines = scene.title.split("\n");
+  const titleText = titleLines.join(" ");
+  const titleWords = titleText.split(/\s+/).length;
   const accentWords = scene.titleAccent?.split(/\s+/).length ?? 0;
   const bodyStart = 1 + titleWords + accentWords;
   const ctaIndex = bodyStart + 3; // body words fade in 20 ms apart; CTAs follow right after
@@ -45,7 +48,14 @@ export default function SceneOverlay({ scene, headingLevel, intro = false }: Sce
     <div
       className={`flex h-full flex-col justify-end px-6 pt-20 pb-24 md:px-16 md:pb-20 ${placement[scene.textPosition]}`}
     >
-      <div className="max-w-[50rem]">
+      <div className="text-halo pointer-events-auto relative isolate max-w-[50rem]">
+        {/* Phones only: fades in and out with the text (ScrollSequence), reaching past the toolbar zone. */}
+        <div
+          data-scrim
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-x-6 -top-28 -bottom-72 -z-10 bg-linear-to-b from-cream/0 via-cream/65 via-30% to-cream/80 md:hidden"
+        />
+
         <p data-reveal className="text-xs font-semibold tracking-[0.25em] md:text-sm">
           <span className={intro ? "intro-fade block" : undefined} style={intro ? order(0) : undefined}>
             {scene.number} —
@@ -58,12 +68,17 @@ export default function SceneOverlay({ scene, headingLevel, intro = false }: Sce
             className="mt-3 font-display text-[clamp(2.75rem,7vw,8.75rem)] leading-[0.95] font-semibold tracking-tight"
           >
             <span className="sr-only">
-              {scene.title} {scene.titleAccent}
+              {titleText} {scene.titleAccent}
             </span>
             <span aria-hidden="true">
-              <span className="block">
-                <IntroWords text={scene.title} start={1} variant="rise" />
-              </span>
+              {titleLines.map((line, i) => {
+                const start = 1 + titleLines.slice(0, i).join(" ").split(/\s+/).filter(Boolean).length;
+                return (
+                  <span key={i} className="block">
+                    <IntroWords text={line} start={start} variant="rise" />
+                  </span>
+                );
+              })}
               {scene.titleAccent && (
                 <span className="block font-normal italic">
                   <IntroWords text={scene.titleAccent} start={1 + titleWords} variant="rise" />
@@ -77,9 +92,14 @@ export default function SceneOverlay({ scene, headingLevel, intro = false }: Sce
             data-split="words"
             className="mt-3 font-display text-[clamp(2.75rem,7vw,8.75rem)] leading-[0.95] font-semibold tracking-tight"
           >
-            {scene.title}
+            {titleLines.map((line, i) => (
+              <span key={i} className="block">
+                {i > 0 && " "}
+                {line}
+              </span>
+            ))}
             {scene.titleAccent && (
-              <span className="block font-normal italic">{scene.titleAccent}</span>
+              <span className="block font-normal italic"> {scene.titleAccent}</span>
             )}
           </Heading>
         )}

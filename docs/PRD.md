@@ -42,10 +42,10 @@ Tidak memakai Three.js/WebGL. Canvas 2D sudah cukup dan jauh lebih ringan.
 ```
 [Navbar fixed]  logo · Home · Menu · Our Story · Visit · [Order now]
 
-SCENE 01  "Wake the beans"        (pinned, cinematic)
-SCENE 02  "Pour it slow"          (pinned, cinematic)
-SCENE 03  "Let it bloom"          (pinned, cinematic)
-SCENE 04  "Make time taste better" (pinned, cinematic)
+SCENE 01  "Wake the beans"        (scroll-linked, cinematic)
+SCENE 02  "Pour it slow"          (scroll-linked, cinematic)
+SCENE 03  "Let it bloom"          (scroll-linked, cinematic)
+SCENE 04  "Make time taste better" (scroll-linked, cinematic)
 
 SECTION   Menu highlight (3–4 kartu produk)
 SECTION   Our story (teks + 1 foto)
@@ -65,10 +65,10 @@ Kamera, latar, dan pencahayaan konsisten di semua scene: latar krem polos hangat
 | 04 | **Make time taste better.** | Dripper dan server kaca perlahan memudar, digantikan cangkir keramik berisi latte dengan pusaran latte art di posisi yang sama (kanan); kamera mendekat pelan dan sedikit menunduk | Kiri, subjek di kanan |
 
 Setiap scene:
-- Di-*pin* selama sekitar 250–300vh scroll.
-- Frame index = progres scroll scene itu (scrub, tidak autoplay).
+- Section setinggi satu layar yang **ikut bergulir** (tidak di-pin): saat scroll, halaman bergerak turun dan video berjalan bersamaan. Saat transisi, dua scene bisa terlihat sekaligus (scene lama keluar ke atas, scene baru masuk dari bawah), dengan tepi yang menyatu lewat gradasi.
+- Frame index = posisi section di layar, dari mulai masuk di bawah sampai keluar di atas (scrub, tidak autoplay).
 - Penomoran kecil "01 —", "02 —" di atas judul, seperti referensi.
-- Teks masuk dengan SplitText (per baris/kata, naik + fade), keluar sebelum scene berikutnya mulai.
+- Teks scene 01 tampil sejak awal (intro CSS). Teks scene 02–04 masuk per baris/kata (naik + fade) saat section masuk, lalu ikut bergulir keluar bersama section-nya.
 - Indikator "SCROLL" kecil di scene 01, hilang setelah mulai scroll.
 
 ### Copy sementara (Inggris)
