@@ -1,0 +1,50 @@
+{
+  "scene-01": {
+    "desktop": {
+      "count": 120,
+      "width": 1600,
+      "height": 900
+    },
+    "mobile": {
+      "count": 60,
+      "width": 900,
+      "height": 506
+    }
+  },
+  "scene-02": {
+    "desktop": {
+      "count": 120,
+      "width": 1600,
+      "height": 900
+    },
+    "mobile": {
+      "count": 60,
+      "width": 900,
+      "height": 506
+    }
+  },
+  "scene-03": {
+    "desktop": {
+      "count": 120,
+      "width": 1600,
+      "height": 900
+    },
+    "mobile": {
+      "count": 60,
+      "width": 900,
+      "height": 506
+    }
+  },
+  "scene-04": {
+    "desktop": {
+      "count": 120,
+      "width": 1600,
+      "height": 900
+    },
+    "mobile": {
+      "count": 60,
+      "width": 900,
+      "height": 506
+    }
+  }
+}

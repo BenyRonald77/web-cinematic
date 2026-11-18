@@ -1,0 +1,36 @@
+# deps & build
+node_modules/
+.next/
+out/
+build/
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+
+# env
+.env*
+!.env.example
+
+# raw AI assets (large, not committed)
+assets/raw/*
+assets/keyframes/*
+!assets/raw/.gitkeep
+!assets/keyframes/.gitkeep
+
+# debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# TEMPORARY: dummy frames from `npm run frames:dummy`.
+# Remove this line in milestone 3, when the real frames are committed.
+public/sequences/
+
+# tooling output (Playwright MCP screenshots)
+.playwright-mcp/
+
+# misc
+.DS_Store
+*.pem
+.vercel

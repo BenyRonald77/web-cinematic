@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+/* Brand palette. Accent is a placeholder (dark olive) until PRD §12 is decided. */
+@theme {
+  --color-cream: #efe6d8;
+  --color-cream-deep: #e6d9c4;
+  --color-espresso: #2a1c13;
+  --color-espresso-soft: #5c4838;
+  --color-accent: #4a5428;
+  --color-accent-contrast: #f7f2e9;
+}
+
+/* Font variables come from next/font in layout.tsx. */
+@theme inline {
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
