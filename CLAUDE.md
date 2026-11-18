@@ -19,11 +19,15 @@ Do not add Three.js, Framer Motion, or other animation libraries. Ask before add
 ## Commands
 
 ```
-npm run dev        # dev server at http://localhost:3000
-npm run build      # production build, must pass before a milestone is done
+npm run dev           # dev server at http://localhost:3000
+npm run dev:lan       # dev server on 0.0.0.0, to test on a phone: http://<laptop LAN IP>:3000
+npm run build         # production build, must pass before a milestone is done
 npm run lint
-npm run frames     # node scripts/extract-frames.mjs → frames + src/data/sequences.json
+npm run frames        # node scripts/extract-frames.mjs → frames + src/data/sequences.json
+npm run frames:dummy  # numbered placeholder frames for all 4 scenes (overwrites real frames)
 ```
+
+`dev:lan`: `allowedDevOrigins` in `next.config.ts` lists this machine's LAN IPv4 addresses when the server starts, so restart it if the IP changes. Give the phone the IP of the adapter that is actually connected (check `Get-NetAdapter`; a disconnected Wi-Fi adapter can still show an old address). The phone must be on the same network, not a guest network with client isolation.
 
 ## Folder structure
 
@@ -37,6 +41,7 @@ src/
   lib/gsap.ts             registers GSAP plugins once, re-exports gsap
   data/                   scenes.ts (copy + focusX per scene), menu.ts, sequences.json (generated)
 scripts/                  extract-frames.mjs, make-dummy-frames.mjs
+  lib/frames.mjs          shared paths, frame-set specs, ffmpeg/ffprobe + manifest helpers
 assets/raw/               source videos scene-01.mp4 … (gitignored)
 assets/keyframes/         Nano Banana images (gitignored)
 public/sequences/scene-0X/{desktop,mobile}/0001.webp
@@ -67,14 +72,20 @@ docs/                     PRD.md, ASSET-PROMPTS.md
 
 ## Asset pipeline (`npm run frames`)
 
-For each `assets/raw/scene-0X.mp4`:
-- desktop: `ffmpeg -i in.mp4 -vf "fps=24,scale=1600:-2" -c:v libwebp -quality 72 desktop/%04d.webp`
-- mobile: same but `fps=12,scale=900:-2`
-- trim the frame count to ≤ 120 desktop / ≤ 60 mobile if longer
-- write `src/data/sequences.json`: `{ "scene-01": { "desktop": { "count", "width", "height" }, "mobile": {...} }, ... }`
-- print total size per scene and warn if desktop > 9 MB per scene
+For each `assets/raw/scene-0X` video (`.mp4` preferred; `.mov`, `.webm`, `.mkv` also read):
+- desktop: `-vf "fps=24,scale=1600:-2:flags=lanczos" -c:v libwebp -quality 72` → `public/sequences/scene-0X/desktop/0001.webp …`
+- mobile: same with `fps=12,scale=900:-2`
+- More than 120 desktop / 60 mobile frames: thin evenly across the whole clip. Never cut the end off.
+- Frame `0001` and the last frame are always the clip's true first and last frames (extracted separately): they are the cut points shared with the previous and next scene (PRD §6).
+- A scene's old frames are only replaced once its new frames are extracted.
+- `src/data/sequences.json` is merged, not rewritten: `{ "scene-01": { "desktop": { "count", "width", "height" }, "mobile": {...} }, ... }`. Width and height are read from the output frames. Scenes without a video keep their entry (e.g. dummy frames); it warns if their frames are missing on disk.
+- Prints size per scene and totals against the PRD §10 budget (desktop ≤ 35 MB, mobile ≤ 12 MB). Warns if desktop > 9 MB per scene, if the source is not 16:9, or if it is narrower than 1600 px (upscaled; prefer 1080p).
+- `npm run frames -- scene-01` processes only the given scene(s). `--src`, `--out`, `--manifest` override the folders (useful for tests outside the repo).
+- ffmpeg and ffprobe come from PATH, or from `FFMPEG_PATH` / `FFPROBE_PATH`.
 
-`scripts/make-dummy-frames.mjs` generates numbered placeholder frames (ffmpeg testsrc + drawtext) so the scroll can be built before real assets exist.
+`scripts/make-dummy-frames.mjs` (`npm run frames:dummy`) generates numbered placeholder frames for all four scenes (ffmpeg testsrc2 + drawtext, same sizes as the real pipeline) and rewrites the manifest, so the scroll can be built before real assets exist. It overwrites real frames.
+
+While only dummy frames exist, `public/sequences/` is gitignored. Remove that line from `.gitignore` once the real videos are in and their frames get committed (milestone 4).
 
 ## Verification
 
