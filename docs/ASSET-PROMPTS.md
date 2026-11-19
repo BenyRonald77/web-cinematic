@@ -182,21 +182,22 @@ Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow mot
 
 | Batas | Tepi bawah *end* | Tepi atas *start* | Selisih | offsetX sementara |
 |---|---|---|---|---|
-| 01→02 kolom biji | s1-end 0,6626 | s2-start 0,6880 | −0,0254 | scene-02 −0,025 |
-| 02→03 aliran bubuk | s2-end 0,6804 | s3-start 0,6777 | +0,0027 | scene-03 −0,023 |
+| 01→02 kolom biji | s1-end 0,6626 | s2-start 0,6792 | −0,0165 | scene-02 −0,017 |
+| 02→03 aliran bubuk | s2-end 0,6804 | s3-start 0,6777 | +0,0027 | scene-03 −0,014 |
 | 03→04 | gradasi | gradasi | — | — |
 
 Angka ini perkiraan awal; nilai final diukur dari frame video dengan `npm run flow`, karena Veo biasanya menggeser posisi sedikit.
 
-Kolom biji di batas 01→02 (s2-start diedit ulang supaya kolomnya lebih lebar dan padat; versi pertama disimpan sebagai `s2-start.old.jpg`):
+Penyambung di tepi gambar (pita 5% tinggi gambar; `npm run flow -- --keyframes assets/keyframes/final` mencetak tabel ini):
 
-| Tepi (pita 5% tinggi gambar) | Pusat | 80% biji di dalam | Lebar | Kepadatan | Warna biji (L\*) |
+| Tepi | Pusat | 80% aliran di dalam | Lebar | Kepadatan | Kecerahan (L\*) |
 |---|---|---|---|---|---|
-| s1-end bawah | 0,662 | 0,618–0,706 | 0,088 | 71% | 25 |
-| s2-start atas, versi pertama | 0,683 | 0,657–0,711 | 0,054 | 73% | — |
-| s2-start atas, versi sekarang | 0,682 | 0,594–0,768 | 0,174 | 90% | 33 |
+| s1-end bawah | 0,662 | 0,618–0,706 | 0,088 | 64% | 25 |
+| s2-start atas | 0,676 | 0,632–0,720 | 0,088 | 83% | 23 |
+| s2-end bawah | 0,680 | 0,666–0,694 | 0,028 | 95% | 23 |
+| s3-start atas | 0,678 | 0,667–0,688 | 0,020 | 94% | 23 |
 
-Versi sekarang kebalikan dari versi pertama: kolomnya kira-kira 2× lebih lebar dari ujung kolom s1-end (melebar terutama ke kanan), lebih padat, dan bijinya lebih terang (sangrai lebih muda). Target lebar sekitar 0,09–0,10 (≈ 250–275 px dari 2752 px), biji sangrai gelap seperti di s1-end.
+**Kolom biji lolos** (syarat lebar 0,08–0,11): lebar dan kecerahan s2-start sama dengan ujung kolom s1-end. s2-start diedit ulang dua kali di Gemini (versi pertama lebarnya 0,054, versi kedua 0,174 dan bijinya lebih terang); versi ketiga dibuat dengan s1-end sebagai contoh. Sisa beda: kolom di s2-start lebih rapat dan bijinya terlihat sedikit lebih kecil.
 
 ---
 

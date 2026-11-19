@@ -56,6 +56,43 @@ def flow_x(frames, top, strip):
 KEYFRAME_BORDERS = [("scene-02", "s1-end", "s2-start", "bean column"), ("scene-03", "s2-end", "s3-start", "ground coffee")]
 
 
+def lightness(rgb):
+    """CIE L* of an sRGB colour (0 = black, 100 = white)."""
+    c = np.asarray(rgb) / 255
+    lin = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    y = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+    return 116 * np.cbrt(y) - 16 if y > 216 / 24389 else 24389 / 27 * y
+
+
+def column_stats(a, top, strip=0.05):
+    """Centre, the span holding 80 % of the flow, how densely that span is filled, and the
+    lightness of the flow itself, in the edge strip. Robust to a few stray beans."""
+    h, w, _ = a.shape
+    rows = max(2, round(h * strip))
+    band = a[:rows] if top else a[h - rows:]
+    backdrop = np.median(band.reshape(-1, 3), axis=0)
+    diff = np.abs(band - backdrop).max(axis=2)
+    present = diff > 40
+    present[:, : int(w * 0.35)] = False
+    col = present.mean(axis=0)
+    xs = (np.arange(w) + 0.5) / w
+    cdf = np.cumsum(col) / col.sum()
+    at = lambda q: float(xs[min(len(xs) - 1, np.searchsorted(cdf, q))])
+    p10, p90, p5, p95 = at(0.10), at(0.90), at(0.05), at(0.95)
+    centre = float((xs * col).sum() / col.sum())
+    span = present[:, int(p5 * w):int(p95 * w) + 1]
+    solid = diff > 60
+    solid[:, : int(w * 0.35)] = False
+    return {
+        "centre": centre,
+        "from": p10,
+        "to": p90,
+        "width": p90 - p10,
+        "density": float(span.mean()),
+        "lightness": float(lightness(np.median(band[solid], axis=0))) if solid.any() else float("nan"),
+    }
+
+
 def measure_keyframes(folder):
     """One image per side, so the strip height is varied to show how stable the reading is."""
     offset = 0.0
@@ -75,6 +112,10 @@ def measure_keyframes(folder):
         detail = "  ".join(f"strip {s:.0%}: {ra:.4f}/{rb:.4f}" for s, ra, _, rb, _ in readings)
         print(f"  {what}: {end} bottom x {xa:.4f} (width {readings[1][2]:.3f})  ->  {start} top x {xb:.4f} "
               f"(width {readings[1][4]:.3f})   gap {xa - xb:+.4f}   [{detail}]")
+        for label, img, top in ((f"{end} bottom", a, False), (f"{start} top", b, True)):
+            s = column_stats(img, top)
+            print(f"    {label:16s} centre {s['centre']:.3f}   80% within {s['from']:.3f}-{s['to']:.3f} "
+                  f"(width {s['width']:.3f})   density {s['density']:.0%}   lightness L* {s['lightness']:.0f}")
         print(f"    -> {scene} offsetX {offset:+.4f} (keyframes only; re-measure with `npm run flow` on the video frames)")
 
 
