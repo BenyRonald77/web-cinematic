@@ -1,15 +1,20 @@
 """Match the backdrop colour of the keyframes before they go into Flow.
 
 Reads assets/keyframes/s1-start … s4-end (.jpg/.jpeg/.png), samples the empty left side of each,
-takes the mean as the target, and writes assets/keyframes/final/:
+takes a target backdrop (--target colour, else the mean of --ref, else the mean of all), and
+writes assets/keyframes/final/:
   - keyframes already within --threshold dE of the target are copied byte for byte,
-  - the others get one global gain per RGB channel (nothing moves, nothing else changes) and are
-    saved as JPEG quality 95, 4:4:4.
+  - the others get one global tone curve per RGB channel (nothing moves, nothing else changes)
+    and are saved as JPEG quality 95, 4:4:4. The curve maps the measured backdrop exactly onto the
+    target: a plain gain where the channel goes down, and where it goes up, a gain below the
+    backdrop level plus a straight run from the target to 255 above it, so whites stay white
+    instead of clipping one channel (milk and paper would otherwise turn cyan).
 Originals are never touched. Decoding uses Pillow (libjpeg-turbo, like browsers), so the numbers
 are the colours people see.
 
-Usage:  npm run keyframes
-        python -P scripts/match-keyframes.py [--src DIR] [--out DIR] [--threshold 0.5] [--ref s1-start,s2-start]
+Usage:  npm run keyframes -- --target "#FAE8D4"      (the site's --color-cream)
+        python -P scripts/match-keyframes.py [--src DIR] [--out DIR] [--threshold 0.5]
+                                             [--target "#RRGGBB" | --ref s1-start,s2-start]
 Needs:  Python 3 with Pillow and numpy.
 """
 import argparse
@@ -53,6 +58,18 @@ def hexc(c):
     return "#" + "".join(f"{int(round(v)):02X}" for v in c)
 
 
+def tone_curve(a, backdrop, target):
+    """Per channel: backdrop -> target exactly, 0 -> 0, and 255 -> 255 where the channel is raised."""
+    out = np.empty_like(a)
+    for c in range(3):
+        v, b, t = a[..., c], backdrop[c], target[c]
+        if t <= b or b >= 254.5:
+            out[..., c] = v * (t / b)  # lowering (or no headroom): a plain gain cannot clip
+        else:
+            out[..., c] = np.where(v <= b, v * (t / b), t + (v - b) * (255 - t) / (255 - b))
+    return out
+
+
 def find(src, name):
     for ext in EXTS:
         p = src / f"{name}{ext}"
@@ -67,6 +84,7 @@ def main():
     ap.add_argument("--out", type=Path, default=None, help="default: <src>/final")
     ap.add_argument("--threshold", type=float, default=0.5, help="dE at or below which a keyframe is copied as is")
     ap.add_argument("--ref", default="", help="comma-separated names that define the target (default: all)")
+    ap.add_argument("--target", default="", help='fixed target backdrop colour, e.g. "#FAE8D4" (overrides --ref)')
     args = ap.parse_args()
     out = args.out or args.src / "final"
 
@@ -80,12 +98,20 @@ def main():
 
     imgs = {n: load(p) for n, p in files.items()}
     left = {n: region(a, LEFT) for n, a in imgs.items()}
-    refs = [r.strip() for r in args.ref.split(",") if r.strip()] or list(files)
-    unknown = [r for r in refs if r not in left]
-    if unknown:
-        sys.exit(f"--ref names not found: {', '.join(unknown)}")
-    target = np.mean([left[r] for r in refs], axis=0)
-    print(f"Target backdrop (mean of {', '.join(refs)}): {hexc(target)} rgb({', '.join(f'{v:.1f}' for v in target)})\n")
+    if args.target:
+        hx = args.target.lstrip("#")
+        if len(hx) != 6:
+            sys.exit(f'--target must look like "#FAE8D4", got "{args.target}"')
+        target = np.array([int(hx[i:i + 2], 16) for i in (0, 2, 4)], dtype=np.float64)
+        source = "fixed"
+    else:
+        refs = [r.strip() for r in args.ref.split(",") if r.strip()] or list(files)
+        unknown = [r for r in refs if r not in left]
+        if unknown:
+            sys.exit(f"--ref names not found: {', '.join(unknown)}")
+        target = np.mean([left[r] for r in refs], axis=0)
+        source = f"mean of {', '.join(refs)}"
+    print(f"Target backdrop ({source}): {hexc(target)} rgb({', '.join(f'{v:.1f}' for v in target)})\n")
 
     out.mkdir(parents=True, exist_ok=True)
     print(f"{'file':10s} {'before':8s} {'dE':>5s}   {'after':8s} {'dE':>5s}   action")
@@ -99,7 +125,7 @@ def main():
             print(f"{name:10s} {hexc(before)} {d_before:5.2f}   {'-':8s} {'':>5s}   copied        {ratio}")
             continue
         gains = target / before
-        corrected = np.clip(np.rint(imgs[name] * gains), 0, 255).astype(np.uint8)
+        corrected = np.clip(np.rint(tone_curve(imgs[name], before, target)), 0, 255).astype(np.uint8)
         dst = out / f"{name}.jpg"
         Image.fromarray(corrected).save(dst, "JPEG", quality=95, subsampling=0, optimize=True)
         after = region(load(dst), LEFT)

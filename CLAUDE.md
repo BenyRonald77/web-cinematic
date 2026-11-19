@@ -25,8 +25,9 @@ npm run build         # production build, must pass before a milestone is done
 npm run lint
 npm run frames        # node scripts/extract-frames.mjs → frames + src/data/sequences.json
 npm run frames:dummy  # numbered placeholder frames for all 4 scenes (overwrites real frames)
-npm run keyframes     # match keyframe backdrop colours: assets/keyframes/s1-start … s4-end → final/
+npm run keyframes -- --target "#FAE8D4"   # match keyframe backdrops to the site cream: s1-start … s4-end → final/
 npm run flow          # measure the flow at each scene border → suggested offsetX per scene
+                      # (-- --keyframes assets/keyframes/final for an early estimate from the keyframes)
 ```
 
 `keyframes` and `flow` are Python scripts (`python -P`, needs Pillow and numpy). They decode with Pillow on purpose: ffmpeg's YUV→RGB paths disagree with each other and with browsers by 1–3 levels.
@@ -55,7 +56,7 @@ docs/                     PRD.md, ASSET-PROMPTS.md
 
 ## How the cinematic scenes work
 
-- The four scenes are one vertical flow: what leaves the bottom edge of scene N's last frame enters the top edge of scene N+1's first frame (see `docs/ASSET-PROMPTS.md`).
+- The four scenes are one vertical flow: at the 01→02 and 02→03 borders, what leaves the bottom edge of scene N's last frame enters the top edge of scene N+1's first frame; 03→04 meets in a plain-cream gradient (see `docs/ASSET-PROMPTS.md`).
 - Each scene is a `200lvh` section: a `sticky` screen-high image (`<canvas>` + poster) holds still for one screen of scroll while the frames play, then scrolls away with the page. The text box (screen-high, at the top of the section) is not sticky, so the copy keeps scrolling over the held image.
 - Rule: frames only move while no neighbouring scene is on screen. The hold starts after the seam strip of the previous scene has left and ends before the next scene's seam strip appears, so a crossing border always shows scene N's **last** frame above scene N+1's **first** frame. Do not break this when changing heights or seams.
 - Scenes 02–04 overlap the previous scene by a 2lvh seam and fade their top edge in over it (`blendTop`, `SEAM` in ScrollSequence): as thin as possible, so the flow reads as crossing the border. The last scene fades its bottom into the page (`fadeBottom`). The page background (`--color-cream`) equals the video backdrop.

@@ -2,7 +2,7 @@
 
 ## Konsep
 
-Keempat scene adalah satu cerita yang mengalir ke bawah, seperti kamera yang turun mengikuti kopi jatuh. Benda yang keluar dari tepi bawah scene N harus masuk dari tepi atas scene N+1, di posisi horizontal yang sama.
+Keempat scene adalah satu cerita yang mengalir ke bawah, seperti kamera yang turun mengikuti kopi jatuh. Di dua batas pertama, benda yang keluar dari tepi bawah scene N masuk dari tepi atas scene N+1 di posisi horizontal yang sama. Batas scene 03→04 disambung dengan gradasi: kopi berhenti di server kaca di scene 03, lalu server yang sama muncul lagi di atas scene 04, miring, menuang kopi ke cangkir.
 
 ```
 ┌──────────────────────────────┐
@@ -15,11 +15,12 @@ Keempat scene adalah satu cerita yang mengalir ke bawah, seperti kamera yang tur
 │                        ┊     │   ← aliran bubuk kopi
 ├────────────────────────┊─────┤   PENYAMBUNG 2: aliran bubuk kopi
 │ 03 Let it bloom        ┊   ⌐ │   teko hitam
-│                       \_/    │   dripper terakota, bloom
-│                        ┊     │   ← aliran kopi seduh
-├────────────────────────┊─────┤   PENYAMBUNG 3: aliran kopi
-│ 04 Make time taste     ┊┊    │   kopi + susu berpilin
-│    better             (~~)   │   cangkir latte art
+│                       \_/    │   dripper terakota bergagang, bloom
+│                       [  ]   │   server kaca, kopi menetes ke dalamnya
+├──────────────────────────────┤   PENYAMBUNG 3: gradasi (tanpa aliran)
+│ 04 Make time taste   [/] ⌐   │   server kaca miring + teko susu menuang
+│    better             ┊┊     │   kopi + susu berpilin
+│                      (~~)    │   cangkir latte art
 └──────────────────────────────┘
           teks kiri    sumbu 70%
 ```
@@ -27,8 +28,8 @@ Keempat scene adalah satu cerita yang mengalir ke bawah, seperti kamera yang tur
 ## Aturan supaya nyambung
 
 1. **Semua benda di satu sumbu vertikal, sekitar 70% lebar gambar dari kiri.** Sisi kiri kosong untuk teks.
-2. **Penyambung antar-scene selalu berupa aliran tipis** (kolom biji, aliran bubuk, aliran cairan), bukan benda besar. Aliran tipis gampang disejajarkan; benda besar hampir mustahil dibuat pas oleh AI.
-3. **Semua benda melayang di ruang krem polos, tanpa meja atau garis lantai.** Kalau ada meja, tiap scene punya garis horizon sendiri dan sambungannya pasti kelihatan. Pengecualian: cangkir di akhir scene 04 boleh punya bayangan lembut.
+2. **Penyambung 01→02 dan 02→03 berupa aliran tipis** (kolom biji, aliran bubuk), bukan benda besar. Aliran tipis gampang disejajarkan; benda besar hampir mustahil dibuat pas oleh AI. **Penyambung 03→04 berupa gradasi:** tidak ada yang menembus batas, jadi tepi bawah s3-end dan tepi atas s4-start cukup sama-sama krem polos di sekitar batas.
+3. **Semua benda melayang di ruang krem polos, tanpa meja atau garis lantai.** Kalau ada meja, tiap scene punya garis horizon sendiri dan sambungannya pasti kelihatan. Pengecualian: server kaca di scene 03 dan cangkir di scene 04 boleh punya bayangan lembut di bawahnya.
 4. **Yang harus cocok:** tepi bawah gambar *end* scene N dengan tepi atas gambar *start* scene N+1. Saat batas section melintas di layar, dua frame inilah yang tampil bersamaan.
 5. Sisa selisih posisi beberapa piksel dirapikan oleh Claude Code (geser horizontal per scene dan samakan warna).
 
@@ -40,12 +41,12 @@ Keempat scene adalah satu cerita yang mengalir ke bawah, seperti kamera yang tur
 | `s1-end.jpg` | biji terbelah, kolom biji jatuh keluar bawah |
 | `s2-start.jpg` | kolom biji masuk dari atas ke hopper kosong |
 | `s2-end.jpg` | hopper setengah penuh, aliran bubuk keluar bawah |
-| `s3-start.jpg` | aliran bubuk masuk dari atas ke dripper |
-| `s3-end.jpg` | bloom + teko menuang, aliran kopi keluar bawah |
-| `s4-start.jpg` | aliran kopi + susu masuk dari atas, cangkir berisi espresso |
-| `s4-end.jpg` | pilinan kopi-susu, cangkir dengan latte art |
+| `s3-start.jpg` | aliran bubuk masuk dari atas ke dripper terakota bergagang yang berdiri di atas server kaca kosong |
+| `s3-end.jpg` | bloom + teko hitam menuang dari kanan atas, kopi menetes ke server (sepertiga penuh); tidak ada yang keluar lewat tepi bawah |
+| `s4-start.jpg` | server kaca yang sama miring di atas (sebagian di luar frame) menuang kopi, teko susu stainless menuang susu; cangkir berisi kopi di bawah |
+| `s4-end.jpg` | kopi dan susu berpilin seperti pita, cangkir dengan latte art |
 
-Simpan di `assets/keyframes/`. Video disimpan sebagai `assets/raw/scene-01.mp4` … `scene-04.mp4` (timpa yang lama).
+Simpan file asli di `assets/keyframes/`. `npm run keyframes -- --target "#FAE8D4"` menyamakan warna latarnya dan menaruh hasilnya di `assets/keyframes/final/`: **pakai yang di `final/` untuk Flow.** Video disimpan sebagai `assets/raw/scene-01.mp4` … `scene-04.mp4` (timpa yang lama).
 
 ---
 
@@ -56,7 +57,7 @@ Pakai mode **Gambar**, rasio **16:9**, model yang sama untuk semua gambar (Hydro
 ### Blok gaya (tempel di akhir setiap prompt yang ditandai [GAYA])
 
 ```
-Style: high-end commercial coffee product photography, seamless warm cream backdrop (#F9E7D4) filling the entire frame, no table, no floor, no horizon line, all objects levitating in mid-air, soft diffused key light from the left, gentle soft shadows, photorealistic, crisp detail, 16:9 landscape. All main objects are aligned on one vertical axis at 70% of the frame width from the left. The left half of the frame is clean empty space for text. No text, no logos, no people, no hands.
+Style: high-end commercial coffee product photography, seamless warm cream backdrop (#FAE8D4) filling the entire frame, no table, no floor, no horizon line, all objects levitating in mid-air, soft diffused key light from the left, gentle soft shadows, photorealistic, crisp detail, 16:9 landscape. All main objects are aligned on one vertical axis at 70% of the frame width from the left. The left half of the frame is clean empty space for text. No text, no logos, no people, no hands.
 ```
 
 ### s1-start (buat dari nol)
@@ -90,21 +91,21 @@ Edit this image: the glass hopper is now half filled with roasted coffee beans, 
 
 ```
 Use the attached image only as a reference for style, color, lighting and the falling stream of ground coffee. Create the NEXT frame directly BELOW it, as if the camera moved straight down by one full frame.
-At the top edge, the same narrow stream of ground coffee enters the frame at 70% of the frame width and falls straight down into a terracotta clay pour-over dripper with a white paper filter, floating in mid-air in the middle of the frame on the same vertical axis. The filter is just starting to fill with grounds. Nothing comes out of the bottom of the dripper yet, and the space below it is empty cream.
+At the top edge, the same narrow stream of ground coffee enters the frame at 70% of the frame width and falls straight down into a terracotta clay pour-over dripper with a small handle and a white paper filter, in the middle of the frame on the same vertical axis. The dripper sits on top of an empty clear glass coffee server with a handle, resting on an invisible surface with a soft shadow beneath it. The filter is just starting to fill with grounds. Nothing drips from the dripper yet.
 [GAYA]
 ```
 
 ### s3-end (upload s3-start, lalu edit)
 
 ```
-Edit this image: the stream of ground coffee from the top has stopped. The paper filter is filled with coffee grounds that have bloomed into a domed, glossy, bubbly surface. A matte black gooseneck kettle enters from the upper right corner, partly outside the frame, pouring a thin smooth stream of hot water onto the center of the grounds, with faint steam. From the bottom tip of the dripper, a thin continuous stream of dark amber brewed coffee falls straight down and leaves the frame through the bottom edge at 70% of the frame width. Keep the exact same dripper, its size and position, the camera, backdrop color and lighting. 16:9 landscape.
+Edit this image: the stream of ground coffee from the top has stopped. The paper filter is filled with coffee grounds that have bloomed into a domed, glossy, bubbly surface. A matte black gooseneck kettle enters from the upper right corner, partly outside the frame, pouring a thin smooth stream of hot water onto the center of the grounds, with faint steam. Dark amber brewed coffee drips from the tip of the dripper into the glass server, which is now about one third full. Nothing leaves the frame through the bottom edge; the space below the server stays empty cream. Keep the exact same dripper and server, their size and position, the camera, backdrop color and lighting. 16:9 landscape.
 ```
 
 ### s4-start (upload s3-end sebagai referensi, buat frame baru)
 
 ```
-Use the attached image only as a reference for style, color, lighting and the falling stream of brewed coffee. Create the NEXT frame directly BELOW it, as if the camera moved straight down by one full frame.
-At the top edge, the same thin stream of dark amber coffee enters the frame at 70% of the frame width and falls straight down. A second stream of white steamed milk enters from the top edge right beside it, and the two streams begin to twist loosely around each other as they fall. In the lower part of the frame, on the same vertical axis, a wide matte cream ceramic cup on a matching saucer, resting on an invisible surface with a soft shadow beneath it, filled with dark espresso with golden crema, no latte art yet. The streams fall into the center of the cup.
+Use the attached image only as a reference for style, color, lighting and the glass server filled with brewed coffee. Create the NEXT frame directly BELOW it, as if the camera moved straight down by one full frame.
+At the top of the frame, partly outside the top edge, the same clear glass server is tilted and pours a stream of dark amber coffee. To its right, a brushed stainless steel milk pitcher, also partly outside the top edge, pours a stream of white steamed milk. Both streams fall into the center of a wide matte cream ceramic cup on a matching saucer in the lower part of the frame, on the same vertical axis at 70% of the frame width, resting on an invisible surface with a soft shadow beneath it. The cup holds dark coffee, no latte art yet. The area along the top edge between and around the two vessels is plain cream, so this frame meets the previous one in a soft gradient.
 [GAYA]
 ```
 
@@ -117,10 +118,10 @@ Edit this image: the coffee and milk streams twist together into an elegant, scu
 ### Cek setiap gambar
 
 - Benda utama di sumbu sekitar 70% lebar, sisi kiri kosong.
-- Tidak ada meja, lantai, atau garis horizon (kecuali bayangan cangkir di scene 04).
-- Gambar *end*: aliran benar-benar menyentuh tepi bawah.
-- Gambar *start* scene 2–4: aliran benar-benar masuk dari tepi atas, kira-kira di posisi yang sama dengan aliran di gambar *end* sebelumnya.
-- Latar krem, tidak oranye.
+- Tidak ada meja, lantai, atau garis horizon (kecuali bayangan lembut server di scene 03 dan cangkir di scene 04).
+- Gambar *end* scene 01–02: aliran benar-benar menyentuh tepi bawah. Gambar *end* scene 03: tepi bawah krem polos.
+- Gambar *start* scene 02–03: aliran benar-benar masuk dari tepi atas, kira-kira di posisi yang sama dengan aliran di gambar *end* sebelumnya.
+- Latar krem, tidak oranye. Gemini menggeser warna sedikit demi sedikit setiap kali gambar diedit; `npm run keyframes` meluruskannya.
 
 ---
 
@@ -151,7 +152,7 @@ Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow mot
 
 ```
 Create a video using s3-start.jpg as the FIRST frame and s3-end.jpg as the LAST frame. 16:9, longest duration available.
-Motion: ground coffee streams in from the top edge and fills the paper filter, then the stream from the top thins out and stops. A matte black gooseneck kettle slides in slowly from the upper right corner and pours a thin stream of hot water onto the grounds; the grounds swell and bloom with small bubbles and faint steam. Then brewed coffee begins to drip from the bottom tip of the dripper and becomes a thin continuous stream falling straight down through the bottom edge of the frame. The kettle is matte black from the first moment it appears. The dripper never moves.
+Motion: ground coffee streams in from the top edge and fills the paper filter, then the stream from the top thins out and stops. A matte black gooseneck kettle slides in slowly from the upper right corner and pours a thin stream of hot water onto the grounds; the grounds swell and bloom with small bubbles and faint steam. Then brewed coffee begins to drip from the tip of the dripper into the glass server below and slowly fills it to about one third. Nothing falls out of the bottom of the frame. The kettle is matte black from the first moment it appears. The dripper and server never move.
 Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow motion, smooth, photorealistic, soft light from the left, warm cream backdrop. No cuts, no scene change, no text, no music.
 ```
 
@@ -159,16 +160,33 @@ Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow mot
 
 ```
 Create a video using s4-start.jpg as the FIRST frame and s4-end.jpg as the LAST frame. 16:9, longest duration available.
-Motion: the coffee stream and the milk stream keep falling from the top edge for the entire video and slowly twist around each other into a graceful spiral ribbon of glossy liquid, pouring into the center of the cup. White foam spreads across the espresso and a rosetta latte art pattern forms layer by layer. A few small droplets float in the air. The cup and saucer never move.
+Motion: the tilted glass server and the steel milk pitcher at the top keep pouring for the entire video; the coffee stream and the milk stream slowly twist around each other into a graceful spiral ribbon of glossy liquid, pouring into the center of the cup. White foam spreads across the coffee and a rosetta latte art pattern forms layer by layer. A few small droplets float in the air. The server, the pitcher, the cup and the saucer never move.
 Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow motion, smooth, photorealistic, soft light from the left, warm cream backdrop. No cuts, no scene change, no text, no music.
 ```
 
 ### Cek setiap video
 
-- Aliran penyambung (biji, bubuk, kopi) tetap di posisi horizontal yang sama dari awal sampai akhir.
-- Di akhir video, aliran masih menyentuh tepi bawah (kecuali scene 04).
+- Aliran penyambung (biji, bubuk) tetap di posisi horizontal yang sama dari awal sampai akhir.
+- Di akhir video scene 01–02, aliran masih menyentuh tepi bawah. Scene 03 berakhir dengan tepi bawah krem polos.
+- Lebar kolom biji di akhir scene 01 kira-kira sama dengan di awal scene 02 (di keyframe, kolom di s1-end dua kali lebih lebar).
 - Tidak ada benda yang tiba-tiba berganti warna atau bentuk di detik-detik terakhir.
 - Tidak ada watermark.
+
+---
+
+## Hasil keyframe (19 Nov 2026)
+
+- Kedelapan gambar 2752×1536 (rasio 1,7917, sekitar 0,8% lebih lebar dari 16:9), tanpa watermark terlihat.
+- Warna latar asli makin oranye di setiap edit: ΔE terhadap #FAE8D4 naik dari 6,4 (s1-start) sampai 16,7 (s4-end). Setelah `npm run keyframes -- --target "#FAE8D4"`, semuanya ΔE ≤ 0,4 tanpa highlight yang terpotong.
+- Posisi penyambung (x = fraksi lebar gambar, diukur dengan `npm run flow -- --keyframes assets/keyframes/final`):
+
+| Batas | Tepi bawah *end* | Tepi atas *start* | Selisih | offsetX sementara |
+|---|---|---|---|---|
+| 01→02 kolom biji | s1-end 0,6626 (lebar 0,139) | s2-start 0,6826 (lebar 0,065) | −0,0200 | scene-02 −0,020 |
+| 02→03 aliran bubuk | s2-end 0,6804 (lebar 0,033) | s3-start 0,6777 (lebar 0,026) | +0,0027 | scene-03 −0,017 |
+| 03→04 | gradasi | gradasi | — | — |
+
+Angka ini perkiraan awal; nilai final diukur dari frame video dengan `npm run flow`, karena Veo biasanya menggeser posisi sedikit.
 
 ---
 

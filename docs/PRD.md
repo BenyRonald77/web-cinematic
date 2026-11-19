@@ -55,14 +55,14 @@ FOOTER    sosial media, copyright
 
 ## 6. Scene cinematic
 
-Keempat scene adalah **satu aliran vertikal** yang mengalir ke bawah, seperti kamera yang turun mengikuti kopi jatuh. Latar krem polos tanpa meja atau garis lantai, cahaya lembut dari kiri, gaya foto produk studio. Semua benda berada di satu sumbu vertikal sekitar 70% lebar gambar; sisi kiri kosong untuk teks. Aliran tipis yang keluar dari tepi bawah frame akhir scene N masuk dari tepi atas frame awal scene N+1 di posisi horizontal yang sama (detail di `docs/ASSET-PROMPTS.md`).
+Keempat scene adalah **satu aliran vertikal** yang mengalir ke bawah, seperti kamera yang turun mengikuti kopi jatuh. Latar krem polos tanpa meja atau garis lantai, cahaya lembut dari kiri, gaya foto produk studio. Semua benda berada di satu sumbu vertikal sekitar 70% lebar gambar; sisi kiri kosong untuk teks. Di batas 01→02 dan 02→03, aliran tipis yang keluar dari tepi bawah frame akhir scene N masuk dari tepi atas frame awal scene N+1 di posisi horizontal yang sama. Batas 03→04 disambung dengan gradasi (detail di `docs/ASSET-PROMPTS.md`).
 
 | # | Copy utama | Visual (awal → akhir) | Posisi teks |
 |---|---|---|---|
 | 01 | **Wake the beans** / *one by one.* + subcopy + tombol "Order now" & "See the menu" | Biji kopi raksasa melayang → biji terbelah, kolom biji kecil berjatuhan keluar lewat tepi bawah | Kiri, subjek di kanan |
 | 02 | **Grind it fresh.** | Kolom biji masuk dari atas ke hopper grinder kaca → hopper terisi, aliran bubuk kopi keluar lewat tepi bawah | Kiri |
-| 03 | **Let it bloom.** | Aliran bubuk masuk dari atas ke dripper terakota → bloom, teko hitam menuang, aliran kopi seduh keluar lewat tepi bawah | Kiri bawah |
-| 04 | **Make time taste better.** | Aliran kopi dan susu masuk dari atas ke cangkir berisi espresso → keduanya berpilin, cangkir dengan latte art | Kiri, subjek di kanan |
+| 03 | **Let it bloom.** | Aliran bubuk masuk dari atas ke dripper terakota di atas server kaca → bloom, teko hitam menuang, kopi menetes ke server | Kiri bawah |
+| 04 | **Make time taste better.** | Server kaca yang sama, miring di atas, menuang kopi bersama teko susu ke cangkir → keduanya berpilin, cangkir dengan latte art | Kiri, subjek di kanan |
 
 Setiap scene:
 - Gambar **tertahan di layar** selama video scene itu berjalan (sekitar satu layar scroll), sementara teks tetap ikut bergulir. Setelah video selesai, gambar ikut bergulir ke atas dan scene berikutnya masuk dari bawah.
