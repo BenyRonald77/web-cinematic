@@ -16,16 +16,18 @@ const TOOLBAR_TOLERANCE = 160;
 const DEBUG =
   process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SEQUENCE_DEBUG === "1";
 
-/** Edge fade height, as a share of the section. Must match the -mt-[14lvh] overlap below. */
-const BLEND = 14;
-
 /**
- * Mask for the image: a blended scene fades in over the previous scene's last strip (a soft
- * table-to-wall gradient instead of a seam); the last scene fades out into the page.
+ * Seam between scenes, in % of the screen height: as thin as possible so the flow reads as one
+ * stream crossing the border, just enough to hide a slight tone difference.
+ * Must match the -mt-[2lvh] overlap below.
  */
+const SEAM = 2;
+/** Fade of the last scene into the page, in % of the screen height. */
+const FADE_OUT = 14;
+
 function edgeMask(blendTop: boolean, fadeBottom: boolean) {
-  const top = blendTop ? `transparent, black ${BLEND}%` : "black, black";
-  const bottom = fadeBottom ? `black ${100 - BLEND}%, transparent` : "black";
+  const top = blendTop ? `transparent, black ${SEAM}%` : "black, black";
+  const bottom = fadeBottom ? `black ${100 - FADE_OUT}%, transparent` : "black";
   return `linear-gradient(to bottom, ${top}, ${bottom})`;
 }
 
@@ -34,11 +36,15 @@ type ScrollSequenceProps = {
   frames: SequenceFrames;
   /** Horizontal crop point 0–1, same meaning as CSS `object-position: X%`. */
   focusX: number;
+  /** Sideways shift as a share of the drawn image width (see drawCover). */
+  offsetX?: number;
+  /** Smallest and largest offsetX of all scenes, so every scene is drawn at the same size. */
+  offsetRange?: readonly [number, number];
   /** Load this scene first and fetch its poster at high priority (first scene). */
   priority?: boolean;
   /** Text is already on screen at load (its intro is CSS, see IntroWords), so GSAP doesn't reveal it. */
   intro?: boolean;
-  /** Overlap the previous scene's last strip and fade in over it (every scene but the first). */
+  /** Overlap the previous scene by the seam height and fade in over it (every scene but the first). */
   blendTop?: boolean;
   /** Fade the bottom edge into the page (the last scene). */
   fadeBottom?: boolean;
@@ -48,35 +54,31 @@ type ScrollSequenceProps = {
   children: ReactNode;
 };
 
-/**
- * Text reveal, scrubbed by the same progress as the frames (duration 1 = the whole passage).
- * Text comes in while the section enters (20–44 %) and then simply scrolls away with the page.
- */
+/** Text reveal while the text enters the screen (scrubbed): scrim first, then the pieces. */
 function buildTextTimeline(pieces: Element[], scrims: Element[]) {
   const tl = gsap.timeline({ paused: true });
-  if (scrims.length) {
-    tl.fromTo(scrims, { opacity: 0 }, { opacity: 1, duration: 0.18, ease: "none" }, 0.16);
-  }
+  if (scrims.length) tl.fromTo(scrims, { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "none" }, 0);
   tl.fromTo(
     pieces,
     { yPercent: 125, opacity: 0 }, // 125: clears the mask's bottom padding
-    { yPercent: 0, opacity: 1, duration: 0.16, ease: "power2.out", stagger: { amount: 0.08 } },
-    0.2,
+    { yPercent: 0, opacity: 1, duration: 0.6, ease: "power2.out", stagger: { amount: 0.3 } },
+    0.1,
   );
-  tl.set({}, {}, 1);
   return tl;
 }
 
 /**
- * One cinematic scene: a full-screen section that scrolls with the page while its frames play.
- * Progress runs from the moment the section starts entering at the bottom of the screen until
- * it has left at the top, so the page and the film always move together. The first scene starts
- * at the top of the page (clamped), so it opens on frame 1.
+ * One cinematic scene. The image holds still on screen (sticky) while the frames play, then
+ * scrolls away with the page; the text scrolls with the page the whole time. So whenever a scene
+ * border crosses the screen, the scene above shows its LAST frame and the scene below its FIRST
+ * frame: the two frames made to continue each other's flow.
  */
 export default function ScrollSequence({
   sceneId,
   frames,
   focusX,
+  offsetX = 0,
+  offsetRange = [offsetX, offsetX],
   priority = false,
   intro = false,
   blendTop = false,
@@ -85,6 +87,7 @@ export default function ScrollSequence({
   children,
 }: ScrollSequenceProps) {
   const sectionRef = useRef<HTMLElement>(null);
+  const layerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const preloader = useFramePreloader(sceneId, frames, priority);
@@ -92,11 +95,12 @@ export default function ScrollSequence({
   useGSAP(
     () => {
       const section = sectionRef.current!;
+      const layer = layerRef.current!;
       const canvas = canvasRef.current!;
       const overlay = overlayRef.current!;
       const mm = gsap.matchMedia();
 
-      // Reduced motion gets no scrub, text animation or frame loading: CSS shows the last
+      // Reduced motion gets no hold, scrub, text animation or frame loading: CSS shows the last
       // frame as a static <picture> with plain text.
       mm.add("(prefers-reduced-motion: no-preference)", (context) => {
         const ctx2d = canvas.getContext("2d");
@@ -107,7 +111,6 @@ export default function ScrollSequence({
         let drawn = -1; // frame currently on the canvas (-1: none, poster shows through)
         let sizeDirty = true;
         let rafId = 0;
-        let textTl: gsap.core.Timeline | null = null;
         let cancelled = false;
 
         // --- Drawing: only when the nearest loaded frame changes ---------------------------
@@ -115,7 +118,7 @@ export default function ScrollSequence({
           rafId = 0;
           const index = preloader.nearest(target);
           if (index < 0 || (index === drawn && !sizeDirty)) return;
-          drawCover(ctx2d, preloader.image(index)!, focusX);
+          drawCover(ctx2d, preloader.image(index)!, focusX, offsetX, offsetRange);
           drawn = index;
           sizeDirty = false;
           if (DEBUG) canvas.dataset.frame = String(index);
@@ -151,20 +154,24 @@ export default function ScrollSequence({
         });
         resizeObserver.observe(canvas);
 
-        // --- Scroll progress → frame index + text timeline ---------------------------------
+        // --- Hold: frames play while the sticky image fills the screen ---------------------
         const update = (progress: number) => {
           const next = Math.round(progress * (count - 1));
           if (next !== target) {
             target = next;
             requestRender();
           }
-          textTl?.progress(progress);
         };
-
+        // Hold = section height − sticky image height (both lvh, read from the DOM so JS and
+        // CSS agree), minus the seam strips: frames only move while no neighbour is on screen,
+        // so a crossing border always shows this scene's first or last frame.
+        const seam = () => (layer.offsetHeight * SEAM) / 100;
+        const seamBefore = () => (blendTop ? seam() : 0);
+        const seamAfter = () => (fadeBottom ? 0 : seam());
         const trigger = ScrollTrigger.create({
           trigger: section,
-          start: "clamp(top bottom)", // entering at the bottom (never before the page top)
-          end: "bottom top", // gone at the top
+          start: () => `top+=${seamBefore()} top`,
+          end: () => `+=${section.offsetHeight - layer.offsetHeight - seamBefore() - seamAfter()}`,
           invalidateOnRefresh: true,
           onUpdate: (self) => update(self.progress),
           onRefresh: (self) => update(self.progress),
@@ -177,14 +184,16 @@ export default function ScrollSequence({
         });
 
         // --- Text --------------------------------------------------------------------------
-        // The first scene's text is on screen from the first paint (CSS intro), nothing to do.
+        // Scene 01's text is on screen from the first paint (CSS intro): nothing to do.
         // Elsewhere: [data-reveal] elements animate as they are; [data-split] ones are split by
-        // SplitText first (after fonts load, so lines are measured with the real font).
+        // SplitText first (after fonts load, so lines are measured with the real font). The
+        // reveal is scrubbed by the text entering the screen.
         const setupText = () => {
           const sources = gsap.utils.toArray<HTMLElement>("[data-split], [data-reveal]", overlay);
           const scrims = gsap.utils.toArray<HTMLElement>("[data-scrim]", overlay);
           const splits = new Map<HTMLElement, SplitText>();
           let ready = false;
+          let textTrigger: ScrollTrigger | null = null;
 
           const pieces = () =>
             sources.flatMap((el): Element[] => {
@@ -196,9 +205,20 @@ export default function ScrollSequence({
           const rebuild = () => {
             if (!ready) return;
             context.add(() => {
-              textTl?.revert();
-              textTl = buildTextTimeline(pieces(), scrims);
-              textTl.progress(trigger.progress);
+              const progress = textTrigger?.progress ?? 0;
+              textTrigger?.animation?.revert();
+              textTrigger?.kill();
+              const tl = buildTextTimeline(pieces(), scrims);
+              textTrigger = ScrollTrigger.create({
+                // The first text element (e.g. the "02 —" label), not the screen-high box: the
+                // reveal plays while the copy itself comes into view.
+                trigger: sources[0] ?? overlay,
+                start: "top 95%",
+                end: "top 50%",
+                scrub: true,
+                animation: tl,
+              });
+              tl.progress(textTrigger.progress || progress);
             });
           };
 
@@ -248,49 +268,66 @@ export default function ScrollSequence({
 
   const mobileQuery = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
   const mask = edgeMask(blendTop, fadeBottom);
+  // Poster: same crop as the canvas. The offset is a share of the cover-fitted image width,
+  // max(screen width, screen height × image ratio); the canvas may also grow a little to keep
+  // the edges covered, which the poster skips (it only shows until the first frame is drawn).
+  const ratio = frames.desktop.width / frames.desktop.height;
+  const objectPosition = offsetX
+    ? `calc(${focusX * 100}% + ${offsetX} * max(100vw, ${(ratio * 100).toFixed(3)}lvh)) 50%`
+    : `${focusX * 100}% 50%`;
 
   return (
     <section
       ref={sectionRef}
       id={sceneId}
       aria-labelledby={titleId}
-      // lvh: the mobile toolbar never changes the page height. No background: where this scene
-      // overlaps the previous one, the faded top edge shows that scene underneath.
-      className={`relative h-lvh overflow-hidden motion-reduce:h-svh ${blendTop ? "-mt-[14lvh]" : ""}`}
+      // 200lvh = the screen-high image + a one-screen hold. lvh: the mobile toolbar never
+      // changes the page height. No background: in the seam overlap, the faded top edge shows
+      // the previous scene underneath.
+      className={`relative h-[200lvh] motion-reduce:h-auto ${blendTop ? "-mt-[2lvh] motion-reduce:mt-0" : ""}`}
     >
-      {/* Poster: frame 1 until the canvas draws; last frame for reduced motion. Picked by the browser before JS runs. */}
-      <picture>
-        <source
-          media={`(prefers-reduced-motion: reduce) and ${mobileQuery}`}
-          srcSet={frameSrc(sceneId, "mobile", frames.mobile.count - 1)}
-        />
-        <source
-          media="(prefers-reduced-motion: reduce)"
-          srcSet={frameSrc(sceneId, "desktop", frames.desktop.count - 1)}
-        />
-        <source media={mobileQuery} srcSet={frameSrc(sceneId, "mobile", 0)} />
-        {/* Plain <img> (not next/image): frames are pre-optimized and <picture> does the art direction. */}
-        <img
-          src={frameSrc(sceneId, "desktop", 0)}
-          alt=""
-          decoding="async"
-          fetchPriority={priority ? "high" : "auto"}
-          loading={priority ? "eager" : "lazy"}
-          className="pointer-events-none absolute inset-0 size-full object-cover"
+      <div
+        ref={layerRef}
+        className="sticky top-0 h-lvh overflow-hidden motion-reduce:relative motion-reduce:h-svh"
+      >
+        {/* Poster: frame 1 until the canvas draws; last frame for reduced motion. Picked by the browser before JS runs. */}
+        <picture>
+          <source
+            media={`(prefers-reduced-motion: reduce) and ${mobileQuery}`}
+            srcSet={frameSrc(sceneId, "mobile", frames.mobile.count - 1)}
+          />
+          <source
+            media="(prefers-reduced-motion: reduce)"
+            srcSet={frameSrc(sceneId, "desktop", frames.desktop.count - 1)}
+          />
+          <source media={mobileQuery} srcSet={frameSrc(sceneId, "mobile", 0)} />
+          {/* Plain <img> (not next/image): frames are pre-optimized and <picture> does the art direction. */}
+          <img
+            src={frameSrc(sceneId, "desktop", 0)}
+            alt=""
+            decoding="async"
+            fetchPriority={priority ? "high" : "auto"}
+            loading={priority ? "eager" : "lazy"}
+            className="pointer-events-none absolute inset-0 size-full object-cover"
+            style={{ objectPosition, maskImage: mask }}
+          />
+        </picture>
+
+        {/* object-cover: if the box changes without a bitmap resize (toolbar), it crops instead of stretching. */}
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 size-full object-cover motion-reduce:hidden"
           style={{ objectPosition: `${focusX * 100}% 50%`, maskImage: mask }}
         />
-      </picture>
+      </div>
 
-      {/* object-cover: if the box changes without a bitmap resize (toolbar), it crops instead of stretching. */}
-      <canvas
-        ref={canvasRef}
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 size-full object-cover motion-reduce:hidden"
-        style={{ objectPosition: `${focusX * 100}% 50%`, maskImage: mask }}
-      />
-
-      {/* Click-through, so links of the scene underneath stay usable in the overlap; the text block opts back in. */}
-      <div ref={overlayRef} className="pointer-events-none absolute inset-0">
+      {/* Text: a screen-high box at the top of the section that scrolls with the page over the
+          held image. Click-through, so links underneath stay usable; the text block opts back in. */}
+      <div
+        ref={overlayRef}
+        className="pointer-events-none absolute inset-x-0 top-0 h-lvh motion-reduce:h-svh"
+      >
         {children}
       </div>
     </section>

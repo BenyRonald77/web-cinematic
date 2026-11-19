@@ -25,7 +25,11 @@ npm run build         # production build, must pass before a milestone is done
 npm run lint
 npm run frames        # node scripts/extract-frames.mjs → frames + src/data/sequences.json
 npm run frames:dummy  # numbered placeholder frames for all 4 scenes (overwrites real frames)
+npm run keyframes     # match keyframe backdrop colours: assets/keyframes/s1-start … s4-end → final/
+npm run flow          # measure the flow at each scene border → suggested offsetX per scene
 ```
+
+`keyframes` and `flow` are Python scripts (`python -P`, needs Pillow and numpy). They decode with Pillow on purpose: ffmpeg's YUV→RGB paths disagree with each other and with browsers by 1–3 levels.
 
 `dev:lan`: `allowedDevOrigins` in `next.config.ts` lists this machine's LAN IPv4 addresses when the server starts, so restart it if the IP changes. Give the phone the IP of the adapter that is actually connected (check `Get-NetAdapter`; a disconnected Wi-Fi adapter can still show an old address). The phone must be on the same network, not a guest network with client isolation.
 
@@ -39,27 +43,30 @@ src/
     sections/             Hero/Scene overlays, MenuHighlight, OurStory, Visit, Footer
     layout/               Navbar, SmoothScroll (Lenis provider)
   lib/gsap.ts             registers GSAP plugins once, re-exports gsap
-  data/                   scenes.ts (copy + focusX per scene), menu.ts, sequences.json (generated)
-scripts/                  extract-frames.mjs, make-dummy-frames.mjs
+  data/                   scenes.ts (copy, focusX, offsetX per scene), menu.ts, sequences.json (generated)
+scripts/                  extract-frames.mjs, make-dummy-frames.mjs, frames.config.json (trims),
+                          match-keyframes.py, measure-flow.py
   lib/frames.mjs          shared paths, frame-set specs, ffmpeg/ffprobe + manifest helpers
 assets/raw/               source videos scene-01.mp4 … (gitignored)
-assets/keyframes/         Nano Banana images (gitignored)
+assets/keyframes/         keyframes s1-start.jpg … s4-end.jpg, colour-matched copies in final/ (gitignored)
 public/sequences/scene-0X/{desktop,mobile}/0001.webp
 docs/                     PRD.md, ASSET-PROMPTS.md
 ```
 
 ## How the cinematic scenes work
 
-- Each scene is a full-screen section (`h-lvh`, **not pinned**) with a `<canvas>` and a text overlay. The page keeps scrolling while the film plays: frame progress runs from the section entering at the bottom (`clamp(top bottom)`) to leaving at the top (`bottom top`), so two scenes can be on screen at once during a transition.
-- Scenes 02–04 overlap the previous scene by 14lvh and fade their top edge in over it (`blendTop`), so stacked scenes meet in a soft gradient, not a seam; the last scene fades its bottom into the page (`fadeBottom`). The page background (`--color-cream`) equals the video backdrop.
+- The four scenes are one vertical flow: what leaves the bottom edge of scene N's last frame enters the top edge of scene N+1's first frame (see `docs/ASSET-PROMPTS.md`).
+- Each scene is a `200lvh` section: a `sticky` screen-high image (`<canvas>` + poster) holds still for one screen of scroll while the frames play, then scrolls away with the page. The text box (screen-high, at the top of the section) is not sticky, so the copy keeps scrolling over the held image.
+- Rule: frames only move while no neighbouring scene is on screen. The hold starts after the seam strip of the previous scene has left and ends before the next scene's seam strip appears, so a crossing border always shows scene N's **last** frame above scene N+1's **first** frame. Do not break this when changing heights or seams.
+- Scenes 02–04 overlap the previous scene by a 2lvh seam and fade their top edge in over it (`blendTop`, `SEAM` in ScrollSequence): as thin as possible, so the flow reads as crossing the border. The last scene fades its bottom into the page (`fadeBottom`). The page background (`--color-cream`) equals the video backdrop.
 - Scroll progress → frame index. Draw only when the index changes (requestAnimationFrame).
-- `drawCover(ctx, img, focusX)`: cover-fit the image on the canvas; `focusX` (0–1) picks the horizontal crop point so the subject stays visible on portrait screens.
+- `drawCover(ctx, img, focusX, offsetX, offsetRange)`: cover-fit the image on the canvas; `focusX` (0–1) picks the horizontal crop point so the subject stays visible on portrait screens. `offsetX` shifts a scene sideways by a share of the drawn width, to line up the flow at its top border with the scene above (`npm run flow` measures it). Keep `focusX` equal in all scenes, so the alignment holds on every screen size; `offsetRange` makes all scenes grow by the same amount when a shift would expose an edge.
 - Canvas size = CSS size × `Math.min(devicePixelRatio, 2)`. Re-size and `ScrollTrigger.refresh()` on resize/orientation change.
 - Pick `desktop` or `mobile` frame set once on load based on viewport width (< 768px → mobile).
 - Preload: scene 01 first (first 20 frames with priority), other scenes when within ~1 viewport of entering. Show frame 1 as poster until loaded. Never draw an image that is not `complete`; fall back to the nearest loaded frame.
-- Text scrolls with its section. Scene 01's text is visible at first paint (server-split words, CSS keyframes intro, see `IntroWords`). Scenes 02–04: SplitText by lines/words, `yPercent` + `opacity` reveal while the section enters, driven by the same ScrollTrigger progress; no exit animation.
+- Text scrolls with the page. Scene 01's text is visible at first paint (server-split words, CSS keyframes intro, see `IntroWords`). Scenes 02–04: SplitText by lines/words, `yPercent` + `opacity` reveal scrubbed by the text box entering the screen (its own ScrollTrigger); no exit animation.
 - Phones: the centred subject fills the screen height, so text sits at the bottom over a backdrop-coloured scrim (`[data-scrim]`, fades in with the text) plus a soft text halo.
-- `prefers-reduced-motion: reduce` → no scrub; show the last frame of each scene as a static image with plain text.
+- `prefers-reduced-motion: reduce` → no hold, no scrub; show the last frame of each scene as a static image with plain text.
 - Frame counts and paths come from `src/data/sequences.json`. Never hardcode them.
 
 ## Rules
@@ -87,9 +94,6 @@ For each `assets/raw/scene-0X` video (`.mp4` preferred; `.mov`, `.webm`, `.mkv` 
 - ffmpeg and ffprobe come from PATH, or from `FFMPEG_PATH` / `FFPROBE_PATH`.
 
 `scripts/make-dummy-frames.mjs` (`npm run frames:dummy`) generates numbered placeholder frames for all four scenes (ffmpeg testsrc2 + drawtext, same sizes as the real pipeline) and rewrites the manifest, so the scroll can be built before real assets exist. It overwrites real frames.
-
-While only dummy frames exist, `public/sequences/` is gitignored. Remove that line from `.gitignore` once the real videos are in and their frames get committed (milestone 4).
-
 ## Verification
 
 - After UI changes, use the Playwright MCP (if available) to open http://localhost:3000, scroll through each scene at 1440×900 and 390×844, take screenshots, and check the console for errors.

@@ -17,11 +17,17 @@ export type Scene = {
   body: string;
   textPosition: TextPosition;
   /**
-   * Horizontal focus point of the subject in the frame (0 = left edge, 1 = right edge).
-   * Used by drawCover to pick the crop on portrait screens.
-   * Initial guesses; tune once the real frames are in.
+   * Horizontal crop point (0 = left edge, 1 = right edge), like CSS object-position X%. Keeps the
+   * subject visible on portrait screens. Keep it the same in every scene: offsetX alignment
+   * across scene borders only holds on every screen size when focusX is equal.
    */
   focusX: number;
+  /**
+   * Sideways shift of the image as a share of its drawn width (0.01 = 1 %), so the flow leaving
+   * the bottom of the previous scene's last frame lines up with the flow entering the top of this
+   * scene's first frame. Scene 01 is the reference (0). Measure with `npm run flow`.
+   */
+  offsetX: number;
   ctas?: SceneCta[];
 };
 
@@ -35,6 +41,7 @@ export const scenes: Scene[] = [
     body: "Single-origin beans from across the archipelago, roasted in small batches every week.",
     textPosition: "left",
     focusX: 0.84,
+    offsetX: 0,
     ctas: [
       { label: "Order now", href: "#menu" },
       { label: "See the menu", href: "#menu" },
@@ -43,10 +50,11 @@ export const scenes: Scene[] = [
   {
     id: "scene-02",
     number: "02",
-    title: "Pour it slow.",
-    body: "Ninety-two degrees. Thirty seconds of patience.",
+    title: "Grind it fresh.",
+    body: "Ground seconds before brewing, one cup at a time.",
     textPosition: "left",
     focusX: 0.84,
+    offsetX: 0,
   },
   {
     id: "scene-03",
@@ -55,14 +63,16 @@ export const scenes: Scene[] = [
     body: "The first breath of the grounds is where the flavour begins.",
     textPosition: "left-bottom",
     focusX: 0.84,
+    offsetX: 0,
   },
   {
     id: "scene-04",
     number: "04",
     title: "Make time\ntaste better.", // explicit break keeps the title clear of the cup on desktop
     body: "Sit down. Stay a while.",
-    textPosition: "left", // the cup now sits on the right, where the dripper was
+    textPosition: "left",
     focusX: 0.84,
+    offsetX: 0,
     ctas: [{ label: "Visit us", href: "#visit" }],
   },
 ];

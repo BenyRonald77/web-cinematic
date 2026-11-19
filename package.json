@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "eslint",
     "frames": "node scripts/extract-frames.mjs",
-    "frames:dummy": "node scripts/make-dummy-frames.mjs"
+    "frames:dummy": "node scripts/make-dummy-frames.mjs",
+    "keyframes": "python -P scripts/match-keyframes.py",
+    "flow": "python -P scripts/measure-flow.py"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

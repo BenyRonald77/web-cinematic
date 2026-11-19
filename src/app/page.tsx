@@ -4,6 +4,10 @@ import ScrollSequence from "@/components/sequence/ScrollSequence";
 import { scenes } from "@/data/scenes";
 import sequences from "@/data/sequences.json";
 
+// Every scene is drawn at the size the widest shift needs, so aligned flows stay aligned.
+const offsets = scenes.map((scene) => scene.offsetX);
+const offsetRange = [Math.min(...offsets), Math.max(...offsets)] as const;
+
 export default function Home() {
   return (
     <main>
@@ -13,6 +17,8 @@ export default function Home() {
           sceneId={scene.id}
           frames={sequences[scene.id]}
           focusX={scene.focusX}
+          offsetX={scene.offsetX}
+          offsetRange={offsetRange}
           priority={index === 0}
           intro={index === 0}
           blendTop={index > 0}
