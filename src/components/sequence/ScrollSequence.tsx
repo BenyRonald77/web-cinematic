@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useRef, type CSSProperties, type ReactNode } from "react";
 import { gsap, ScrollTrigger, SplitText, useGSAP } from "@/lib/gsap";
 import { drawCover } from "./drawCover";
 import {
@@ -16,17 +16,12 @@ const TOOLBAR_TOLERANCE = 160;
 const DEBUG =
   process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SEQUENCE_DEBUG === "1";
 
-/**
- * Seam between scenes, in % of the screen height: as thin as possible so the flow reads as one
- * stream crossing the border, just enough to hide a slight tone difference.
- * Must match the -mt-[2lvh] overlap below.
- */
-const SEAM = 2;
 /** Fade of the last scene into the page, in % of the screen height. */
 const FADE_OUT = 14;
 
-function edgeMask(blendTop: boolean, fadeBottom: boolean) {
-  const top = blendTop ? `transparent, black ${SEAM}%` : "black, black";
+/** Image mask: fade in over the seam at the top (if any), fade out into the page at the bottom (last scene). */
+function edgeMask(seamTop: number, fadeBottom: boolean) {
+  const top = seamTop > 0 ? `transparent, black ${seamTop}%` : "black, black";
   const bottom = fadeBottom ? `black ${100 - FADE_OUT}%, transparent` : "black";
   return `linear-gradient(to bottom, ${top}, ${bottom})`;
 }
@@ -44,8 +39,13 @@ type ScrollSequenceProps = {
   priority?: boolean;
   /** Text is already on screen at load (its intro is CSS, see IntroWords), so GSAP doesn't reveal it. */
   intro?: boolean;
-  /** Overlap the previous scene by the seam height and fade in over it (every scene but the first). */
-  blendTop?: boolean;
+  /**
+   * Seam with the scene above, in % of the screen height: overlap it by that much and fade in over
+   * it (0 for the first scene). Thin where a flow crosses the border, wider for a plain gradient.
+   */
+  seamTop?: number;
+  /** The next scene's seamTop (0 if there is none), so this scene's frames stop before it appears. */
+  seamBottom?: number;
   /** Fade the bottom edge into the page (the last scene). */
   fadeBottom?: boolean;
   /** id of the heading inside `children`. */
@@ -81,7 +81,8 @@ export default function ScrollSequence({
   offsetRange = [offsetX, offsetX],
   priority = false,
   intro = false,
-  blendTop = false,
+  seamTop = 0,
+  seamBottom = 0,
   fadeBottom = false,
   titleId,
   children,
@@ -165,9 +166,8 @@ export default function ScrollSequence({
         // Hold = section height − sticky image height (both lvh, read from the DOM so JS and
         // CSS agree), minus the seam strips: frames only move while no neighbour is on screen,
         // so a crossing border always shows this scene's first or last frame.
-        const seam = () => (layer.offsetHeight * SEAM) / 100;
-        const seamBefore = () => (blendTop ? seam() : 0);
-        const seamAfter = () => (fadeBottom ? 0 : seam());
+        const seamBefore = () => (layer.offsetHeight * seamTop) / 100;
+        const seamAfter = () => (fadeBottom ? 0 : (layer.offsetHeight * seamBottom) / 100);
         const trigger = ScrollTrigger.create({
           trigger: section,
           start: () => `top+=${seamBefore()} top`,
@@ -267,7 +267,7 @@ export default function ScrollSequence({
   );
 
   const mobileQuery = `(max-width: ${MOBILE_BREAKPOINT - 1}px)`;
-  const mask = edgeMask(blendTop, fadeBottom);
+  const mask = edgeMask(seamTop, fadeBottom);
   // Poster: same crop as the canvas. The offset is a share of the cover-fitted image width,
   // max(screen width, screen height × image ratio); the canvas may also grow a little to keep
   // the edges covered, which the poster skips (it only shows until the first frame is drawn).
@@ -282,9 +282,10 @@ export default function ScrollSequence({
       id={sceneId}
       aria-labelledby={titleId}
       // 200lvh = the screen-high image + a one-screen hold. lvh: the mobile toolbar never
-      // changes the page height. No background: in the seam overlap, the faded top edge shows
-      // the previous scene underneath.
-      className={`relative h-[200lvh] motion-reduce:h-auto ${blendTop ? "-mt-[2lvh] motion-reduce:mt-0" : ""}`}
+      // changes the page height. Pulled up by the seam height (--seam-top); no background, so in
+      // that overlap the faded top edge shows the previous scene underneath.
+      className={`relative h-[200lvh] motion-reduce:h-auto ${seamTop > 0 ? "-mt-(--seam-top) motion-reduce:mt-0" : ""}`}
+      style={seamTop > 0 ? ({ "--seam-top": `${seamTop}lvh` } as CSSProperties) : undefined}
     >
       <div
         ref={layerRef}

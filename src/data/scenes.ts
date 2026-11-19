@@ -28,6 +28,12 @@ export type Scene = {
    * scene's first frame. Scene 01 is the reference (0). Measure with `npm run flow`.
    */
   offsetX: number;
+  /**
+   * Height of the seam between this scene and the one above, in % of the screen height: this
+   * scene overlaps the previous one by that much and fades its top edge in over it. Thin (2) where
+   * a flow crosses the border, wider where the border is a plain-cream gradient. 0 for scene 01.
+   */
+  seamAbove: number;
   ctas?: SceneCta[];
 };
 
@@ -42,6 +48,7 @@ export const scenes: Scene[] = [
     textPosition: "left",
     focusX: 0.84,
     offsetX: 0,
+    seamAbove: 0,
     ctas: [
       { label: "Order now", href: "#menu" },
       { label: "See the menu", href: "#menu" },
@@ -55,6 +62,7 @@ export const scenes: Scene[] = [
     textPosition: "left",
     focusX: 0.84,
     offsetX: 0,
+    seamAbove: 2, // bean column crosses the border
   },
   {
     id: "scene-03",
@@ -64,6 +72,7 @@ export const scenes: Scene[] = [
     textPosition: "left-bottom",
     focusX: 0.84,
     offsetX: 0,
+    seamAbove: 2, // ground coffee crosses the border
   },
   {
     id: "scene-04",
@@ -73,6 +82,7 @@ export const scenes: Scene[] = [
     textPosition: "left",
     focusX: 0.84,
     offsetX: 0,
+    seamAbove: 12, // plain-cream gradient, nothing crosses
     ctas: [{ label: "Visit us", href: "#visit" }],
   },
 ];

@@ -168,7 +168,7 @@ Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow mot
 
 - Aliran penyambung (biji, bubuk) tetap di posisi horizontal yang sama dari awal sampai akhir.
 - Di akhir video scene 01–02, aliran masih menyentuh tepi bawah. Scene 03 berakhir dengan tepi bawah krem polos.
-- Lebar kolom biji di akhir scene 01 kira-kira sama dengan di awal scene 02 (di keyframe, kolom di s1-end dua kali lebih lebar).
+- Lebar, kepadatan, dan warna kolom biji di akhir scene 01 kira-kira sama dengan di awal scene 02 (lihat tabel kolom biji di "Hasil keyframe").
 - Tidak ada benda yang tiba-tiba berganti warna atau bentuk di detik-detik terakhir.
 - Tidak ada watermark.
 
@@ -182,11 +182,21 @@ Camera: completely static, locked-off, no zoom, no pan, no tilt. Style: slow mot
 
 | Batas | Tepi bawah *end* | Tepi atas *start* | Selisih | offsetX sementara |
 |---|---|---|---|---|
-| 01→02 kolom biji | s1-end 0,6626 (lebar 0,139) | s2-start 0,6826 (lebar 0,065) | −0,0200 | scene-02 −0,020 |
-| 02→03 aliran bubuk | s2-end 0,6804 (lebar 0,033) | s3-start 0,6777 (lebar 0,026) | +0,0027 | scene-03 −0,017 |
+| 01→02 kolom biji | s1-end 0,6626 | s2-start 0,6880 | −0,0254 | scene-02 −0,025 |
+| 02→03 aliran bubuk | s2-end 0,6804 | s3-start 0,6777 | +0,0027 | scene-03 −0,023 |
 | 03→04 | gradasi | gradasi | — | — |
 
 Angka ini perkiraan awal; nilai final diukur dari frame video dengan `npm run flow`, karena Veo biasanya menggeser posisi sedikit.
+
+Kolom biji di batas 01→02 (s2-start diedit ulang supaya kolomnya lebih lebar dan padat; versi pertama disimpan sebagai `s2-start.old.jpg`):
+
+| Tepi (pita 5% tinggi gambar) | Pusat | 80% biji di dalam | Lebar | Kepadatan | Warna biji (L\*) |
+|---|---|---|---|---|---|
+| s1-end bawah | 0,662 | 0,618–0,706 | 0,088 | 71% | 25 |
+| s2-start atas, versi pertama | 0,683 | 0,657–0,711 | 0,054 | 73% | — |
+| s2-start atas, versi sekarang | 0,682 | 0,594–0,768 | 0,174 | 90% | 33 |
+
+Versi sekarang kebalikan dari versi pertama: kolomnya kira-kira 2× lebih lebar dari ujung kolom s1-end (melebar terutama ke kanan), lebih padat, dan bijinya lebih terang (sangrai lebih muda). Target lebar sekitar 0,09–0,10 (≈ 250–275 px dari 2752 px), biji sangrai gelap seperti di s1-end.
 
 ---
 

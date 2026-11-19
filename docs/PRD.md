@@ -66,7 +66,7 @@ Keempat scene adalah **satu aliran vertikal** yang mengalir ke bawah, seperti ka
 
 Setiap scene:
 - Gambar **tertahan di layar** selama video scene itu berjalan (sekitar satu layar scroll), sementara teks tetap ikut bergulir. Setelah video selesai, gambar ikut bergulir ke atas dan scene berikutnya masuk dari bawah.
-- Saat batas section melintas di layar, yang tampil selalu frame akhir scene N dan frame awal scene N+1, sehingga aliran terlihat menembus batas. Gradasi di batas dibuat setipis mungkin (2% tinggi layar).
+- Saat batas section melintas di layar, yang tampil selalu frame akhir scene N dan frame awal scene N+1, sehingga aliran terlihat menembus batas. Lebar gradasi diatur per batas: 2% tinggi layar di batas yang dilewati aliran (01→02, 02→03), sekitar 12% di batas 03→04 yang berupa gradasi.
 - Selisih posisi horizontal aliran di batas dirapikan dengan `offsetX` per scene (diukur dengan `npm run flow`).
 - Frame index = progres scroll selama gambar tertahan (scrub, tidak autoplay).
 - Penomoran kecil "01 —", "02 —" di atas judul, seperti referensi.

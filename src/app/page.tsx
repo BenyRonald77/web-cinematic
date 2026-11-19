@@ -21,7 +21,8 @@ export default function Home() {
           offsetRange={offsetRange}
           priority={index === 0}
           intro={index === 0}
-          blendTop={index > 0}
+          seamTop={index > 0 ? scene.seamAbove : 0}
+          seamBottom={scenes[index + 1]?.seamAbove ?? 0}
           fadeBottom={index === scenes.length - 1}
           titleId={`${scene.id}-title`}
         >
