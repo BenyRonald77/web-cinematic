@@ -1,0 +1,8 @@
+node_modules
+.next
+.git
+.playwright-mcp
+assets
+docs
+*.md
+.env*
