@@ -15,7 +15,14 @@ export type Scene = {
   /** Optional italic second line under the title. */
   titleAccent?: string;
   body: string;
+  /** Desktop (md+) text placement. */
   textPosition: TextPosition;
+  /**
+   * Phones: where the text sits on its screen-high box. The text scrolls over the held image, so
+   * from the bottom it crosses the whole subject while the frames play; from the top it leaves the
+   * screen early in the hold. Use "top" when the scene's moment happens mid-screen. Default bottom.
+   */
+  mobileText?: "top" | "bottom";
   /**
    * Horizontal crop point (0 = left edge, 1 = right edge), like CSS object-position X%. Keeps the
    * subject visible on portrait screens. Keep it the same in every scene: offsetX alignment
@@ -34,6 +41,14 @@ export type Scene = {
    * a flow crosses the border, wider where the border is a plain-cream gradient. 0 for scene 01.
    */
   seamAbove: number;
+  /**
+   * Share of the frames (0–1) that play while this scene scrolls in (the border above crosses the
+   * screen) and while it scrolls away (the border below crosses it). The rest plays during the
+   * hold. Keep each short enough that the connecting flow is still there at that edge in every
+   * frame it covers, or the stream breaks at the border.
+   */
+  enterShare: number;
+  leaveShare: number;
   ctas?: SceneCta[];
 };
 
@@ -46,9 +61,11 @@ export const scenes: Scene[] = [
     titleAccent: "one by one.",
     body: "Single-origin beans from across the archipelago, roasted in small batches every week.",
     textPosition: "left",
-    focusX: 0.84,
+    focusX: 0.74,
     offsetX: 0,
     seamAbove: 0,
+    enterShare: 0, // on screen from the start
+    leaveShare: 0.1, // bean column leaves the bottom from frame ~66, drifting ~0.02 sideways at the end
     ctas: [
       { label: "Order now", href: "#menu" },
       { label: "See the menu", href: "#menu" },
@@ -60,9 +77,11 @@ export const scenes: Scene[] = [
     title: "Grind it fresh.",
     body: "Ground seconds before brewing, one cup at a time.",
     textPosition: "left",
-    focusX: 0.84,
-    offsetX: 0,
+    focusX: 0.74,
+    offsetX: -0.0103, // npm run flow
     seamAbove: 2, // bean column crosses the border
+    enterShare: 0.25, // column enters the top through the first half
+    leaveShare: 0.25, // ground coffee leaves the bottom from frame ~84 (0.7)
   },
   {
     id: "scene-03",
@@ -70,9 +89,11 @@ export const scenes: Scene[] = [
     title: "Let it bloom.",
     body: "The first breath of the grounds is where the flavour begins.",
     textPosition: "left-bottom",
-    focusX: 0.84,
-    offsetX: 0,
+    focusX: 0.74,
+    offsetX: -0.0085, // npm run flow
     seamAbove: 2, // ground coffee crosses the border
+    enterShare: 0.05, // the stream at the top stops after ~7 frames, then the kettle comes in
+    leaveShare: 0.2, // gradient below: no flow to keep
   },
   {
     id: "scene-04",
@@ -80,9 +101,12 @@ export const scenes: Scene[] = [
     title: "Make time\ntaste better.", // explicit break keeps the title clear of the cup on desktop
     body: "Sit down. Stay a while.",
     textPosition: "left",
-    focusX: 0.84,
-    offsetX: 0,
+    mobileText: "top", // the coffee-milk spiral forms mid-screen during the hold; keep the text off it
+    focusX: 0.74,
+    offsetX: -0.0085, // gradient border, nothing to align: same as scene 03 keeps the shared axis
     seamAbove: 12, // plain-cream gradient, nothing crosses
+    enterShare: 0.2,
+    leaveShare: 0.1,
     ctas: [{ label: "Visit us", href: "#visit" }],
   },
 ];

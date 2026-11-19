@@ -44,10 +44,14 @@ type ScrollSequenceProps = {
    * it (0 for the first scene). Thin where a flow crosses the border, wider for a plain gradient.
    */
   seamTop?: number;
-  /** The next scene's seamTop (0 if there is none), so this scene's frames stop before it appears. */
+  /** The next scene's seamTop (0 if there is none), so the hold ends when the next scene appears. */
   seamBottom?: number;
   /** Fade the bottom edge into the page (the last scene). */
   fadeBottom?: boolean;
+  /** Share of the frames (0–1) that play while the scene scrolls in, before the hold. */
+  enterShare?: number;
+  /** Share of the frames (0–1) that play while the scene scrolls away, after the hold. */
+  leaveShare?: number;
   /** id of the heading inside `children`. */
   titleId?: string;
   /** Text overlay. Mark elements with data-split="words" | "lines", data-reveal or data-scrim to animate them. */
@@ -68,10 +72,10 @@ function buildTextTimeline(pieces: Element[], scrims: Element[]) {
 }
 
 /**
- * One cinematic scene. The image holds still on screen (sticky) while the frames play, then
- * scrolls away with the page; the text scrolls with the page the whole time. So whenever a scene
- * border crosses the screen, the scene above shows its LAST frame and the scene below its FIRST
- * frame: the two frames made to continue each other's flow.
+ * One cinematic scene. The image holds still on screen (sticky) while most of the frames play,
+ * then scrolls away with the page; the text scrolls with the page the whole time. The frames keep
+ * moving while a border crosses the screen: the scene above plays its last `leaveShare`, the scene
+ * below its first `enterShare`, kept short enough that the connecting flow is still in both.
  */
 export default function ScrollSequence({
   sceneId,
@@ -84,6 +88,8 @@ export default function ScrollSequence({
   seamTop = 0,
   seamBottom = 0,
   fadeBottom = false,
+  enterShare = 0,
+  leaveShare = 0,
   titleId,
   children,
 }: ScrollSequenceProps) {
@@ -155,7 +161,7 @@ export default function ScrollSequence({
         });
         resizeObserver.observe(canvas);
 
-        // --- Hold: frames play while the sticky image fills the screen ---------------------
+        // --- Frames follow the scroll the whole time the scene is on screen ----------------
         const update = (progress: number) => {
           const next = Math.round(progress * (count - 1));
           if (next !== target) {
@@ -163,20 +169,33 @@ export default function ScrollSequence({
             requestRender();
           }
         };
-        // Hold = section height − sticky image height (both lvh, read from the DOM so JS and
-        // CSS agree), minus the seam strips: frames only move while no neighbour is on screen,
-        // so a crossing border always shows this scene's first or last frame.
+        // Three stretches, from the section's top entering the screen to its bottom leaving it:
+        //   entering: the border above crosses the screen  → frames 0 … enterShare
+        //   hold:     the sticky image fills the screen    → … 1 − leaveShare
+        //   leaving:  the border below crosses the screen  → … last frame
+        // The hold excludes the seam strips (both lvh heights read from the DOM, so JS and CSS
+        // agree), so the stretches meet exactly when a neighbour appears or disappears.
         const seamBefore = () => (layer.offsetHeight * seamTop) / 100;
         const seamAfter = () => (fadeBottom ? 0 : (layer.offsetHeight * seamBottom) / 100);
+        const holdShare = Math.max(0, 1 - enterShare - leaveShare);
+        const frameProgress = (progress: number) => {
+          const enter = layer.offsetHeight + seamBefore();
+          const leave = layer.offsetHeight + seamAfter();
+          const hold = Math.max(1, section.offsetHeight - layer.offsetHeight - seamBefore() - seamAfter());
+          const at = progress * (enter + hold + leave);
+          if (at < enter) return (enterShare * at) / enter;
+          if (at < enter + hold) return enterShare + (holdShare * (at - enter)) / hold;
+          return Math.min(1, enterShare + holdShare + (leaveShare * (at - enter - hold)) / leave);
+        };
         const trigger = ScrollTrigger.create({
           trigger: section,
-          start: () => `top+=${seamBefore()} top`,
-          end: () => `+=${section.offsetHeight - layer.offsetHeight - seamBefore() - seamAfter()}`,
+          start: "top bottom",
+          end: "bottom top",
           invalidateOnRefresh: true,
-          onUpdate: (self) => update(self.progress),
-          onRefresh: (self) => update(self.progress),
+          onUpdate: (self) => update(frameProgress(self.progress)),
+          onRefresh: (self) => update(frameProgress(self.progress)),
         });
-        update(trigger.progress);
+        update(frameProgress(trigger.progress));
 
         // --- Frames ------------------------------------------------------------------------
         const stopLoading = preloader.start(section, (index) => {

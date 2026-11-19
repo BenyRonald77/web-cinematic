@@ -24,6 +24,8 @@ export default function Home() {
           seamTop={index > 0 ? scene.seamAbove : 0}
           seamBottom={scenes[index + 1]?.seamAbove ?? 0}
           fadeBottom={index === scenes.length - 1}
+          enterShare={scene.enterShare}
+          leaveShare={scene.leaveShare}
           titleId={`${scene.id}-title`}
         >
           <SceneOverlay scene={scene} headingLevel={index === 0 ? 1 : 2} intro={index === 0} />

@@ -1,19 +1,22 @@
 """Measure where the connecting flow crosses each scene border and suggest offsetX per scene.
 
 For each border N -> N+1 it finds the horizontal position (as a share of the image width) of the
-flow in the bottom strip of scene N's LAST frames and in the top strip of scene N+1's FIRST frames
-(a few frames are averaged, so gaps between falling beans don't matter). Then:
+flow in the bottom strip of scene N's LAST frame and in the top strip of scene N+1's FIRST frame:
+exactly the two frames the page shows while that border crosses the screen. Gaps between falling
+beans move the reading a little with the strip height, so several heights are measured and the
+median gap is used (--frames N averages the last/first N desktop frames instead). Then:
     offsetX[N+1] = offsetX[N] + (bottom position of N) - (top position of N+1)
 with scene 01 as the reference (0). Desktop and mobile frames are measured separately as a check:
 both must agree, because offsetX is a share of the drawn width (see drawCover).
 
 With --keyframes DIR it measures the keyframes instead (s1-end bottom vs s2-start top, s2-end bottom
 vs s3-start top), as an early estimate before the videos exist. Scene 04 starts on a gradient, not
-a flow, so the 03 -> 04 border is not measured.
+a flow, so the 03 -> 04 border is not measured; in frames mode scene 04 gets scene 03's offset
+(--gradient names the scenes whose top border is a gradient).
 
 Usage:  npm run flow
         npm run flow -- --keyframes assets/keyframes/final
-        python -P scripts/measure-flow.py [--root DIR] [--frames 6] [--strip 0.03] [--keyframes DIR]
+        python -P scripts/measure-flow.py [--root DIR] [--frames 1] [--strips 0.02 0.03 0.05 0.08] [--keyframes DIR] [--gradient scene-04]
 Needs:  Python 3 with Pillow and numpy.
 """
 import argparse
@@ -122,9 +125,13 @@ def measure_keyframes(folder):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", type=Path, default=ROOT, help="project root (public/sequences, src/data/sequences.json)")
-    ap.add_argument("--frames", type=int, default=6, help="frames averaged at each end")
-    ap.add_argument("--strip", type=float, default=0.03, help="edge strip height, share of the frame height")
+    ap.add_argument("--frames", type=int, default=1,
+                    help="desktop frames averaged at each end (mobile: the same stretch of time); 1 = the cut frames only")
+    ap.add_argument("--strips", type=float, nargs="+", default=[0.02, 0.03, 0.05, 0.08],
+                    help="edge strip heights, share of the frame height (the median gap is used)")
     ap.add_argument("--keyframes", type=Path, default=None, help="measure keyframes s1-end … s3-start in this folder")
+    ap.add_argument("--gradient", nargs="*", default=["scene-04"],
+                    help="scenes whose top border is a plain gradient: not measured, they keep the offset of the scene above")
     args = ap.parse_args()
 
     if args.keyframes:
@@ -140,20 +147,39 @@ def main():
         offsets = {scenes[0]: 0.0}
         rows = []
         for a, b in zip(scenes, scenes[1:]):
+            if b in args.gradient:
+                offsets[b] = offsets[a]
+                rows.append((a, b, None, 0, 0, None, 0, 0, [], 0.0))
+                continue
             n_a = manifest[a][variant]["count"]
-            last = [load(seq / a / variant / f"{i:04d}.webp") for i in range(max(1, n_a - args.frames + 1), n_a + 1)]
-            first = [load(seq / b / variant / f"{i:04d}.webp") for i in range(1, args.frames + 1)]
-            xa, wa, pa = flow_x(last, top=False, strip=args.strip)
-            xb, wb, pb = flow_x(first, top=True, strip=args.strip)
-            if xa is None or xb is None:
-                sys.exit(f"{variant} {a}->{b}: no flow found at the border (is something leaving/entering the frame edge?)")
-            offsets[b] = offsets[a] + (xa - xb)
-            rows.append((a, b, xa, wa, pa, xb, wb, pb))
+            # Same stretch of time in both sets (mobile has fewer frames per second), so something
+            # entering the frame a moment later doesn't skew only one of them.
+            k_a = max(1, round(args.frames * n_a / manifest[a]["desktop"]["count"]))
+            k_b = max(1, round(args.frames * manifest[b][variant]["count"] / manifest[b]["desktop"]["count"]))
+            last = [load(seq / a / variant / f"{i:04d}.webp") for i in range(max(1, n_a - k_a + 1), n_a + 1)]
+            first = [load(seq / b / variant / f"{i:04d}.webp") for i in range(1, k_b + 1)]
+            readings = []
+            for strip in args.strips:
+                xa, wa, pa = flow_x(last, top=False, strip=strip)
+                xb, wb, pb = flow_x(first, top=True, strip=strip)
+                if xa is None or xb is None:
+                    sys.exit(f"{variant} {a}->{b}: no flow found at the border (is something leaving/entering the frame edge?)")
+                readings.append((xa, wa, pa, xb, wb, pb))
+            gaps = [r[0] - r[3] for r in readings]
+            gap = float(np.median(gaps))
+            mid = min(readings, key=lambda r: abs(r[0] - r[3] - gap))  # the reading shown in the log
+            offsets[b] = offsets[a] + gap
+            rows.append((a, b, *mid, gaps, gap))
         results[variant] = offsets
         print(f"{variant}:")
-        for a, b, xa, wa, pa, xb, wb, pb in rows:
+        for a, b, xa, wa, pa, xb, wb, pb, gaps, gap in rows:
+            if xa is None:
+                print(f"  {a} -> {b}: gradient border, not measured ({b} keeps {a}'s offset)")
+                continue
             print(f"  {a} bottom x {xa:.4f} (width {wa:.3f}, strength {pa:.0f})  ->  {b} top x {xb:.4f} "
-                  f"(width {wb:.3f}, strength {pb:.0f})   gap {xa - xb:+.4f}")
+                  f"(width {wb:.3f}, strength {pb:.0f})")
+            spread = "  ".join(f"{st:.0%} {g:+.4f}" for st, g in zip(args.strips, gaps))
+            print(f"      gap per strip height: {spread}   median {gap:+.4f}")
     print("\nSuggested offsetX (scene 01 = reference):")
     for s in scenes:
         d, m = results["desktop"][s], results["mobile"][s]

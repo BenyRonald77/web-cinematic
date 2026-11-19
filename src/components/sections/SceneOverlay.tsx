@@ -2,8 +2,9 @@ import type { CSSProperties } from "react";
 import type { Scene, TextPosition } from "@/data/scenes";
 import IntroWords from "./IntroWords";
 
-// Mobile: text sits at the bottom of the safe (svh) area, over a soft backdrop-coloured scrim.
-// Desktop (md+): placement comes from scenes.ts; no scrim needed (text sits on the empty half).
+// Mobile: text sits at the bottom of the safe (svh) area (or the top, see Scene.mobileText), over a
+// soft backdrop-coloured scrim. Desktop (md+): placement comes from scenes.ts; no scrim needed
+// (text sits on the empty half).
 const placement: Record<TextPosition, string> = {
   left: "md:justify-center md:items-start",
   "left-bottom": "md:justify-end md:items-start",
@@ -46,15 +47,11 @@ export default function SceneOverlay({ scene, headingLevel, intro = false }: Sce
 
   return (
     <div
-      className={`flex h-full flex-col justify-end px-6 pt-20 pb-24 md:px-16 md:pb-20 ${placement[scene.textPosition]}`}
+      className={`flex h-full flex-col px-6 pt-20 pb-24 md:px-16 md:pb-20 ${scene.mobileText === "top" ? "justify-start" : "justify-end"} ${placement[scene.textPosition]}`}
     >
       <div className="text-halo pointer-events-auto relative isolate max-w-[50rem]">
-        {/* Phones only: fades in and out with the text (ScrollSequence), reaching past the toolbar zone. */}
-        <div
-          data-scrim
-          aria-hidden="true"
-          className="pointer-events-none absolute -inset-x-6 -top-28 -bottom-72 -z-10 bg-linear-to-b from-cream/0 via-cream/65 via-30% to-cream/80 md:hidden"
-        />
+        {/* Phones only: fades in with the text (ScrollSequence); soft-edged, see .scrim. */}
+        <div data-scrim aria-hidden="true" className="scrim pointer-events-none absolute -z-10 md:hidden" />
 
         <p data-reveal className="text-xs font-semibold tracking-[0.25em] md:text-sm">
           <span className={intro ? "intro-fade block" : undefined} style={intro ? order(0) : undefined}>

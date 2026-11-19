@@ -33,6 +33,24 @@
   }
 }
 
+/*
+ * Phones: veil in the backdrop colour behind scene text (SceneOverlay [data-scrim]). Soft at both
+ * ends, so no edge shows while the text scrolls over the held image: it fades in over the
+ * --scrim-fade above the text and out over the --scrim-fade below it.
+ */
+.scrim {
+  --scrim-fade: 7rem;
+  --scrim-color: color-mix(in oklab, var(--color-cream) 75%, transparent);
+  inset: calc(-1 * var(--scrim-fade)) -1.5rem;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--scrim-color) var(--scrim-fade),
+    var(--scrim-color) calc(100% - var(--scrim-fade)),
+    transparent
+  );
+}
+
 /* Word/line masks clip overflow; give descenders and italic overhang room without moving layout. */
 .intro-mask,
 .split-word-mask,

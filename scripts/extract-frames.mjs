@@ -13,6 +13,10 @@
  * - Existing frames of a scene are only replaced once its new frames are extracted.
  * - scripts/frames.config.json can trim a clip: { "trim": { "scene-02": { "start": 0, "end": 7.708 } } }
  *   (seconds; end is exclusive). Use it when a generated clip glitches at its ends.
+ * - It can also crop letterbox lines off every clip: { "edgeCrop": 4 } removes 4 source pixels at
+ *   the top and bottom and trims the sides to keep the aspect ratio (same crop for every scene, so
+ *   flows stay aligned across borders). Needed when the keyframes were wider than 16:9 and the
+ *   generator padded the video with thin dark lines.
  *
  * Usage: npm run frames                  every assets/raw/scene-XX video
  *        npm run frames -- scene-01      only the given scene(s)
@@ -55,6 +59,20 @@ function readConfig() {
   } catch (error) {
     fail(`${rel(CONFIG_PATH)} is not valid JSON: ${error.message}`);
   }
+}
+
+/**
+ * ffmpeg crop filter for config.edgeCrop (source pixels off the top and bottom; the sides lose the
+ * matching amount so the aspect ratio stays the same), or "" when not set.
+ */
+function edgeCropFilter(info, config) {
+  const rows = Math.round(Number(config.edgeCrop ?? 0));
+  if (!(rows > 0)) return "";
+  const cols = Math.round((rows * info.width) / info.height);
+  const w = info.width - 2 * cols;
+  const h = info.height - 2 * rows;
+  if (w <= 0 || h <= 0) fail(`edgeCrop ${rows} is too large for ${info.width}×${info.height}`);
+  return `crop=${w}:${h}:${cols}:${rows},`;
 }
 
 /** Part of the clip to use, in seconds (end exclusive), from the optional trim config. */
@@ -134,10 +152,10 @@ function evenly(total, keep) {
   return Array.from({ length: keep }, (_, i) => Math.round((i * (total - 1)) / (keep - 1)));
 }
 
-function extractVariant(file, sceneDir, variant, spec, { start, end }) {
+function extractVariant(file, sceneDir, variant, spec, { start, end }, crop = "") {
   const dir = path.join(sceneDir, variant);
   const tmp = path.join(sceneDir, `.tmp-${variant}`);
-  const scale = `scale=${spec.width}:-2:flags=lanczos`;
+  const scale = `${crop}scale=${spec.width}:-2:flags=lanczos`;
   const webp = ["-c:v", "libwebp", "-quality", String(QUALITY)];
   const quiet = ["-hide_banner", "-loglevel", "error", "-y"];
   // Input seeking (-ss before -i) is frame-accurate when decoding; -t limits the output duration.
@@ -148,8 +166,7 @@ function extractVariant(file, sceneDir, variant, spec, { start, end }) {
   try {
     run(
       FFMPEG,
-      [...quiet, "-ss", sec(start), "-i", file, "-t", sec(end - start), "-an", "-vf", `fps=${spec.fps},${scale}`, ...webp, "-f", "image2", path.join(tmp, "%04d.webp")],
-      `ffmpeg ${path.basename(file)} → ${variant}`,
+      [...quiet, "-ss", sec(start), "-i", file, "-t", sec(end - start), "-an", "-vf", `fps=${spec.fps},${scale}`, ...webp, "-f", "image2", path.join(tmp, "%04d.webp")],      `ffmpeg ${path.basename(file)} → ${variant}`,
     );
     // The clip's true first and last frames: these are the cut points shared with the previous
     // and next scene, and fps sampling can land a source frame or two away from them.
@@ -211,6 +228,11 @@ function main() {
       console.warn(`  ⚠ ${info.width} px wide: desktop frames are upscaled to ${VARIANTS.desktop.width} px (a 1080p source looks sharper)`);
     }
 
+    const crop = edgeCropFilter(info, config);
+    if (crop) {
+      console.log(`  edge crop ${crop.slice(5, -1)} (w:h:x:y, ${rel(CONFIG_PATH)} edgeCrop ${config.edgeCrop})`);
+    }
+
     const range = clipRange(scene, info, config);
     if (range.trimmed) {
       const frame = (t) => Math.round(t * info.fps);
@@ -221,7 +243,7 @@ function main() {
 
     const entry = {};
     for (const [variant, spec] of Object.entries(VARIANTS)) {
-      const result = extractVariant(file, path.join(opts.out, scene), variant, spec, range);
+      const result = extractVariant(file, path.join(opts.out, scene), variant, spec, range, crop);
       entry[variant] = { count: result.count, width: result.width, height: result.height };
       const thinned = result.extracted > result.count ? `  (thinned from ${result.extracted})` : "";
       console.log(
